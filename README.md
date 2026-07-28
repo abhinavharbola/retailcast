@@ -78,7 +78,7 @@ retailcast/
 │
 ├── kaggle/                               # Everything that runs on Kaggle, not locally
 │   ├── KAGGLE_SETUP.md                   # env setup, secrets, run order
-│   ├── requirements-ml.txt               # single source of truth, installed via !pip install on Kaggle
+│   ├── requirements-ipynb.txt            # single source of truth, installed via !pip install on Kaggle
 │   └── notebooks/
 │       ├── 01_eda.ipynb                  # subsetting, activation diagnostics, STL, stationarity tests
 │       ├── 02_feature_engineering.ipynb  # lag/rolling/calendar features, demand-pattern classification
@@ -121,7 +121,7 @@ retailcast/
 │
 ├── .env.example                          # NIM/Groq/Gemini API keys, Supabase URL + key, DagsHub token + URL
 ├── .gitignore
-├── requirements-local.txt                # Streamlit, Supabase, LLM clients, pyyaml, python-dotenv
+├── requirements.txt                      # Streamlit, Supabase, LLM clients, pyyaml, python-dotenv
 └── README.md                             # architecture diagram, setup instructions, results summary
 ```
 
