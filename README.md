@@ -116,8 +116,6 @@ retailcast/
 │   └── config.yaml                       # selected stores/families, horizon, CV folds, cost-per-unit, thresholds
 │
 ├── tests/
-│   ├── test_metrics.py                   # unit tests for MAPE/WAPE/MASE functions
-│   └── test_grounding_check.py           # unit tests for numeric-claim verification logic
 │
 ├── .env.example                          # NIM/Groq/Gemini API keys, Supabase URL + key, DagsHub token + URL
 ├── .gitignore
