@@ -52,6 +52,9 @@ def check_grounding(text, facts, config=CONFIG):
       story framing like "the top 3 features").
     - Percent/currency signs anchor the comparison type but bare decimals (a MASE like
       0.63) are matched against everything in `facts`, since the LLM may drop context.
+    - `absolute_tolerance_default` is an absolute error budget, not a percentage - it must
+      stay small relative to the 0-1 scale most bare-number facts (MASE, precision, recall)
+      live on. Larger numbers are still protected by `relative_tolerance`.
 
     Treat a low grounded_ratio as "needs human review," not "definitely wrong," and
     treat a high ratio as reassurance, not proof - it does not verify report structure,

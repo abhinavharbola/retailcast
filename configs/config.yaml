@@ -14,6 +14,7 @@ data:
     lightgbm_feature_importance: "lightgbm_feature_importance.csv"
     anomaly_results: "anomaly_results.parquet"
     anomaly_eval_metrics: "anomaly_eval_metrics.csv"
+    cost_of_error: "cost_of_error.json"
 
 forecasting:
   horizon_days: 15
@@ -53,4 +54,7 @@ llm:
 grounding_check:
   relative_tolerance: 0.05
   absolute_tolerance_currency: 5.0
-  absolute_tolerance_default: 0.5
+  # Most bare-number facts here (MASE, precision, recall) live in a 0-1 range, so this
+  # must stay small - it's an absolute error budget, not a percentage. 0.5 previously let
+  # a claim like "0.15" pass as grounded against a true value of "0.632" (76% off).
+  absolute_tolerance_default: 0.05

@@ -1,47 +1,51 @@
 import streamlit as st
 
-st.markdown(
-    """
-    <div style="padding-top: 1rem;">
-        <h1 style="margin-bottom: 0;">\U0001F4C8 RetailCast</h1>
-        <p style="font-size: 1.05rem; color: #9CA3AF; margin-top: 0.4rem; max-width: 780px;">
-            Retail demand forecasting, anomaly detection, and a self-verifying GenAI narrative
-            layer — benchmarked across Prophet, SARIMA, LightGBM, and XGBoost on 60 store-family
-            series from the Favorita Store Sales dataset.
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True,
+from dashboard.theme import TOKENS, page_header, stat_row
+
+page_header(
+    eyebrow="Retail forecasting & anomaly intelligence",
+    title="RetailCast",
+    subtitle=(
+        "Demand forecasting and anomaly detection benchmarked across Prophet, SARIMA, "
+        "LightGBM, and XGBoost on 60 store-family series from the Favorita Store Sales "
+        "dataset - paired with a GenAI results narrative that verifies its own numbers "
+        "against the underlying data before you read them."
+    ),
 )
 
-st.divider()
-st.subheader("Explore")
+stat_row([
+    ("60", "series covered"),
+    ("4", "models benchmarked"),
+    ("2", "anomaly detection methods"),
+    ("15d", "walk-forward holdout"),
+])
 
-col1, col2, col3, col4 = st.columns(4)
+st.markdown("<div style='height: 1.6rem'></div>", unsafe_allow_html=True)
+st.markdown('<div class="rc-eyebrow">Explore</div>', unsafe_allow_html=True)
 
-with col1:
-    with st.container(border=True):
-        st.markdown("#### \U0001F4CA Overview")
-        st.caption("Dataset scope, demand pattern classification, stationarity tests.")
-        st.page_link("views/overview.py", label="Open", icon="\u27A1\uFE0F")
+NAV_CARDS = [
+    ("views/overview.py", "\U0001F4CA", "Overview", "neutral",
+     "Dataset scope, demand pattern classification, stationarity tests."),
+    ("views/forecast_explorer.py", "\U0001F4C9", "Forecast Explorer", "forecast",
+     "Model comparison and holdout forecast vs. actual, by store and family."),
+    ("views/anomaly_view.py", "\U0001F6A8", "Anomaly View", "anomaly",
+     "Control limits vs. Isolation Forest, synthetic-injection evaluation."),
+    ("views/ai_report.py", "\U0001F916", "AI Report", "ai",
+     "Grounded GenAI narrative with numeric claim verification."),
+]
 
-with col2:
-    with st.container(border=True):
-        st.markdown("#### \U0001F4C9 Forecast Explorer")
-        st.caption("Model comparison and holdout forecast vs. actual, by store and family.")
-        st.page_link("views/forecast_explorer.py", label="Open", icon="\u27A1\uFE0F")
-
-with col3:
-    with st.container(border=True):
-        st.markdown("#### \U0001F6A8 Anomaly View")
-        st.caption("Control limits vs. Isolation Forest, synthetic-injection evaluation.")
-        st.page_link("views/anomaly_view.py", label="Open", icon="\u27A1\uFE0F")
-
-with col4:
-    with st.container(border=True):
-        st.markdown("#### \U0001F916 AI Report")
-        st.caption("Grounded GenAI narrative with numeric claim verification.")
-        st.page_link("views/ai_report.py", label="Open", icon="\u27A1\uFE0F")
+cols = st.columns(4)
+for col, (path, icon, title, accent, caption) in zip(cols, NAV_CARDS):
+    with col:
+        accent_color = TOKENS.get(accent, TOKENS["neutral"])
+        st.markdown(
+            f'<div class="rc-nav-card" style="--rc-nav-accent: {accent_color}">'
+            f'<div class="rc-card-title">{icon} {title}</div>'
+            f'<div class="rc-card-body">{caption}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.page_link(path, label="Open", icon="\u27A1\uFE0F")
 
 st.divider()
 st.caption(

@@ -61,15 +61,36 @@ structurally capped by its fixed contamination rate, independent of the true ano
 
 **Illustrative cost-of-error framing (holdout, USD):** XGBoost ~$193,153 vs. LightGBM
 ~$206,145 in estimated cost of forecast error, using published grocery-retail margin
-benchmarks, not verified P&L data (see Limitations).
+benchmarks, not verified P&L data (see Limitations). Saved to `cost_of_error.json` by
+notebook 4 and surfaced in the AI Report's facts, like every other number here.
 
 ## Tech stack
 
 - **Modeling:** Prophet, statsmodels (SARIMAX), LightGBM, XGBoost, scikit-learn (IsolationForest)
 - **Experiment tracking:** MLflow via DagsHub
-- **Dashboard:** Streamlit
+- **Dashboard:** Streamlit + Altair (Altair ships with Streamlit, so custom charts add
+  zero extra dependencies over the built-in `st.bar_chart`/`st.line_chart`)
 - **Storage:** Supabase (Postgres)
 - **LLM narrative:** NVIDIA NIM / Groq / Google Gemini, with automatic fallback
+
+## Dashboard design
+
+`dashboard/theme.py` defines the tokens (color, type) and small render helpers every page
+uses, so the app reads as one product instead of five independently-styled pages. The one
+idea worth knowing about: **card color is a legend, not decoration.** Every card gets a
+3px left edge, and the color means the same thing on every page:
+
+| Color | Means |
+|---|---|
+| Gray | Dataset / configuration - what was actually run |
+| Teal | Forecast results - model output, backtested |
+| Amber | Anomaly detection results - flags, control limits |
+| Violet | AI-generated narrative - the one thing in the app that's generated rather than directly computed |
+
+That last one matters most: the AI Report page's whole premise is that you can tell
+generated content apart from verified data, so it's the only page where anything gets a
+violet border. Numbers are set in monospace throughout, since this is a numbers-dense
+review tool and aligned digits are easier to scan and compare than proportional ones.
 
 ## Project structure
 
@@ -77,7 +98,7 @@ benchmarks, not verified P&L data (see Limitations).
 retailcast/
 │
 ├── kaggle/                               # Everything that runs on Kaggle, not locally
-│   ├── KAGGLE_SETUP.md                   # env setup, secrets, run order
+│   ├── kaggle_setup.md                   # env setup, secrets, run order
 │   ├── requirements-ipynb.txt            # single source of truth, installed via !pip install on Kaggle
 │   └── notebooks/
 │       ├── 01_eda.ipynb                  # subsetting, activation diagnostics, STL, stationarity tests
@@ -102,6 +123,7 @@ retailcast/
 │
 ├── dashboard/
 │   ├── app.py                            # st.navigation router: page titles/icons/order, page_config
+│   ├── theme.py                          # design tokens + CSS/Altair helpers shared by all 5 pages
 │   └── views/
 │       ├── home.py                       # landing page, nav cards to each view
 │       ├── overview.py                   # dataset scope, demand pattern classification, stationarity
@@ -110,7 +132,7 @@ retailcast/
 │       └── ai_report.py                  # GenAI narrative, key-metric charts, grounding-check status
 │
 ├── .streamlit/
-│   └── config.toml                       # theme: dark base, custom accent/sidebar colors
+│   └── config.toml                       # theme: dark base, matches dashboard/theme.py tokens
 │
 ├── configs/
 │   └── config.yaml                       # selected stores/families, horizon, CV folds, cost-per-unit, thresholds
@@ -119,7 +141,8 @@ retailcast/
 │
 ├── .env.example                          # NIM/Groq/Gemini API keys, Supabase URL + key, DagsHub token + URL
 ├── .gitignore
-├── requirements.txt                      # Streamlit, Supabase, LLM clients, pyyaml, python-dotenv
+├── requirements.txt                      # Streamlit, Supabase, pyyaml, python-dotenv (LLM
+│                                          #   providers are called directly via requests, no SDKs)
 └── README.md                             # architecture diagram, setup instructions, results summary
 ```
 
@@ -127,15 +150,15 @@ retailcast/
 
 ### 1. Kaggle phase
 
-Run `kaggle/notebooks/01_eda.py` through `05_anomaly_detection.py` in order on Kaggle,
-attaching each notebook's output as the input source for the next (see
-`kaggle/KAGGLE_SETUP.md`). Download all 13 output files from each notebook's Output tab
+Run `kaggle/notebooks/01_eda.ipynb` through `05_anomaly_detection.ipynb` in order on
+Kaggle, attaching each notebook's output as the input source for the next (see
+`kaggle/kaggle_setup.md`). Download all 14 output files from each notebook's Output tab
 into a local `kaggle_outputs/` folder at the repo root.
 
 ### 2. Local dependencies
 
 ```bash
-pip install -r requirements-local.txt
+pip install -r requirements.txt
 pip install pytest
 ```
 
@@ -208,6 +231,11 @@ streamlit run dashboard/app.py
 - **The grounding check is regex-based**, not full claim verification. It can miss
   paraphrased claims with no literal number, and can flag numbers that are correct but
   simply aren't in the source facts.
+- **`configs/config.yaml` doesn't drive the Kaggle notebooks.** They run in a separate
+  environment and hardcode the same values independently (horizon, folds, control-limit
+  k, contamination rate, cost-per-unit). `tests/test_config_consistency.py` checks the two
+  haven't drifted apart, but it's a manual mirror, not a shared source of truth - update
+  both together if you change a modeling parameter.
 
 ## Testing
 

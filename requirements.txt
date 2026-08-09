@@ -1,12 +1,10 @@
 streamlit
+altair
 pandas
 numpy
 pyarrow
-plotly
 python-dotenv
+pyyaml
 requests
 supabase
-openai
-groq
-google-generativeai
 mlflow

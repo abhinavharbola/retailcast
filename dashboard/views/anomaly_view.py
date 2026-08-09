@@ -1,12 +1,22 @@
 from pathlib import Path
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
+from dashboard.theme import TOKENS, altair_theme, inject, page_header
 from src.storage.supabase_client import save_anomaly_flags
 from src.utils.config import CONFIG
 
-st.title("\U0001F6A8 Anomaly Detection")
+inject(accent_rails={"eval_chart": "anomaly", "flagged_table": "anomaly"})
+
+page_header(
+    eyebrow="Anomaly detection - synthetic-injection eval",
+    title="Anomaly Detection",
+    subtitle="Two detection methods scored by injecting synthetic spikes/drops into "
+             "holdout residuals and checking what each method catches.",
+    accent="anomaly",
+)
 
 DATA_DIR = Path(CONFIG["data"]["kaggle_outputs_dir"])
 FILES = CONFIG["data"]["files"]
@@ -21,20 +31,71 @@ def load_anomaly_data():
 
 results, eval_metrics = load_anomaly_data()
 
-st.subheader("Synthetic-injection evaluation")
-with st.container(border=True):
-    st.dataframe(eval_metrics, use_container_width=True)
-    st.caption(
-        "Control limits: threshold computed per store-family from that series' own clean "
-        "residual std (k=2.5). IsolationForest: contamination fixed at 5%, so its recall "
-        "is structurally capped by that rate regardless of the true anomaly count."
+METHOD_LABELS = {
+    "control_limit_flag_injected": ("Control limits", "Per-series threshold at k\u00d7std of clean residuals."),
+    "isoforest_flag_injected": ("Isolation Forest", "Contamination fixed at 5%, so recall is structurally "
+                                                      "capped by that rate regardless of the true anomaly count."),
+}
+
+st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Synthetic-injection evaluation</div>'
+            .format(TOKENS["anomaly"]), unsafe_allow_html=True)
+
+method_cols = st.columns(len(eval_metrics))
+for col, (method, row) in zip(method_cols, eval_metrics.iterrows()):
+    label, note = METHOD_LABELS.get(method, (method, ""))
+    with col:
+        st.markdown(
+            f'<div class="rc-card rc-card--anomaly">'
+            f'<div class="rc-card-title">{label}</div>'
+            f'<div style="display:flex; gap:1.4rem; margin: 0.5rem 0 0.3rem 0;">'
+            f'<div><div class="rc-stat-value" style="font-size:1.4rem">{row["precision"]:.2f}</div>'
+            f'<div class="rc-stat-label">precision</div></div>'
+            f'<div><div class="rc-stat-value" style="font-size:1.4rem">{row["recall"]:.2f}</div>'
+            f'<div class="rc-stat-label">recall</div></div>'
+            f'<div><div class="rc-stat-value" style="font-size:1.4rem">{row["f1"]:.2f}</div>'
+            f'<div class="rc-stat-label">f1</div></div>'
+            f'</div><div class="rc-card-body">{note}</div></div>',
+            unsafe_allow_html=True,
+        )
+
+with st.container(border=True, key="eval_chart"):
+    long_metrics = eval_metrics.reset_index().melt(
+        id_vars="index", value_vars=["precision", "recall", "f1"],
+        var_name="metric", value_name="score",
     )
+    long_metrics["method"] = long_metrics["index"].map(lambda m: METHOD_LABELS.get(m, (m, ""))[0])
+    chart = (
+        alt.Chart(long_metrics)
+        .mark_bar(cornerRadiusEnd=2)
+        .encode(
+            y=alt.Y("method:N", title=None),
+            x=alt.X("score:Q", scale=alt.Scale(domain=[0, 1])),
+            color=alt.Color(
+                "metric:N",
+                scale=alt.Scale(
+                    domain=["precision", "recall", "f1"],
+                    range=[TOKENS["anomaly"], TOKENS["forecast"], TOKENS["text_muted"]],
+                ),
+                legend=alt.Legend(title=None, orient="top"),
+            ),
+            yOffset="metric:N",
+            tooltip=["method", "metric", alt.Tooltip("score:Q", format=".2f")],
+        )
+        .properties(height=140)
+    )
+    st.altair_chart(altair_theme(chart), use_container_width=True)
 
 st.divider()
-st.subheader("Flagged anomalies on real holdout data")
-col1, col2 = st.columns(2)
-col1.metric("Control-limit flags", int(results["control_limit_flag"].sum()))
-col2.metric("IsolationForest flags", int(results["isoforest_flag"].sum()))
+st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Flagged anomalies on real holdout data</div>'
+            .format(TOKENS["anomaly"]), unsafe_allow_html=True)
+
+both_flagged = int(((results["control_limit_flag"] == 1) & (results["isoforest_flag"] == 1)).sum())
+c1, c2, c3 = st.columns(3)
+c1.metric("Control-limit flags", int(results["control_limit_flag"].sum()))
+c2.metric("IsolationForest flags", int(results["isoforest_flag"].sum()))
+c3.metric("Flagged by both", both_flagged)
+st.caption("Points flagged by both methods are the higher-confidence anomalies - "
+           "highlighted below when viewing 'either'.")
 
 method = st.radio("Filter by method", ["control_limit_flag", "isoforest_flag", "either"], horizontal=True)
 if method == "either":
@@ -42,17 +103,22 @@ if method == "either":
 else:
     flagged = results[results[method] == 1]
 
-with st.container(border=True):
-    st.dataframe(
-        flagged[
-            ["date", "store_nbr", "family", "sales", "forecast", "residual", "control_limit_flag", "isoforest_flag"]
-        ].sort_values("date"),
-        use_container_width=True,
-    )
+with st.container(border=True, key="flagged_table"):
+    display_cols = ["date", "store_nbr", "family", "sales", "forecast", "residual",
+                     "control_limit_flag", "isoforest_flag"]
+    flagged_display = flagged[display_cols].sort_values("date")
+
+    if method == "either":
+        def _co_detect_style(row):
+            agree = row["control_limit_flag"] == 1 and row["isoforest_flag"] == 1
+            style = f"background-color: {TOKENS['anomaly']}22" if agree else ""
+            return [style] * len(row)
+        st.dataframe(flagged_display.style.apply(_co_detect_style, axis=1), use_container_width=True)
+    else:
+        st.dataframe(flagged_display, use_container_width=True)
+
     if st.button("Log flagged anomalies to Supabase"):
-        to_log = flagged[
-            ["date", "store_nbr", "family", "sales", "forecast", "residual", "control_limit_flag", "isoforest_flag"]
-        ].copy()
+        to_log = flagged_display.copy()
         to_log["date"] = to_log["date"].dt.strftime("%Y-%m-%d")
         try:
             save_anomaly_flags(to_log)
