@@ -5,19 +5,22 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from dashboard.theme import TOKENS, altair_theme, grounding_pill, inject, page_header
+from dashboard.theme import TOKENS, altair_theme, badge, grounding_pill, inject, page_header
 from src.llm.grounding_check import check_grounding
 from src.llm.narrative import generate_narrative
 from src.storage.supabase_client import fetch_reports, save_report
 from src.utils.config import CONFIG
 
-inject(accent_rails={"narrative_card": "ai", "fallback_log": "ai"})
+inject(accent_rails={
+    "narrative_card": "ai", "fallback_log": "ai",
+    "anomaly_chart_0": "anomaly", "anomaly_chart_1": "anomaly",
+})
 
 page_header(
     eyebrow="GenAI results brief - grounding verified",
     title="AI-Generated Results Report",
     subtitle="Every number the model writes is checked against the same facts it was "
-             "given - nothing here is taken on faith.",
+             "given. Nothing here is taken on faith.",
     accent="ai",
 )
 
@@ -70,30 +73,24 @@ def render_model_mase_chart(facts):
     return altair_theme(chart)
 
 
-def render_anomaly_pr_chart(facts):
-    df = pd.DataFrame({
-        "method": ["control_limit", "control_limit", "isoforest", "isoforest"],
-        "metric": ["precision", "recall", "precision", "recall"],
-        "score": [
-            facts["control_limit_precision"], facts["control_limit_recall"],
-            facts["isoforest_precision"], facts["isoforest_recall"],
-        ],
-    })
+def render_anomaly_method_chart(method_label, precision, recall):
+    # One chart per method (no yOffset grouping) - every bar gets its own row so axis
+    # labels can't collide, regardless of how narrow the column gets.
+    df = pd.DataFrame({"metric": ["precision", "recall"], "score": [precision, recall]})
     chart = (
         alt.Chart(df)
-        .mark_bar(cornerRadiusEnd=2)
+        .mark_bar(cornerRadiusEnd=2, size=20)
         .encode(
-            y=alt.Y("method:N", title=None),
-            x=alt.X("score:Q", scale=alt.Scale(domain=[0, 1])),
+            y=alt.Y("metric:N", sort=["precision", "recall"], title=None),
+            x=alt.X("score:Q", scale=alt.Scale(domain=[0, 1]), title=None),
             color=alt.Color(
                 "metric:N",
                 scale=alt.Scale(domain=["precision", "recall"], range=[TOKENS["anomaly"], TOKENS["forecast"]]),
-                legend=alt.Legend(title=None, orient="top"),
+                legend=None,
             ),
-            yOffset="metric:N",
-            tooltip=["method", "metric", alt.Tooltip("score:Q", format=".2f")],
+            tooltip=["metric", alt.Tooltip("score:Q", format=".2f")],
         )
-        .properties(height=130)
+        .properties(height=90, title=method_label)
     )
     return altair_theme(chart)
 
@@ -116,8 +113,12 @@ if st.button("Generate new report", type="primary"):
     with st.container(border=True, key="fallback_log"):
         with st.expander("Provider fallback log", expanded=fallback_happened):
             for a in result["attempts"]:
-                icon = "\u2705" if a["success"] else "\u274c"
-                st.write(f"{icon} **{a['provider']}** \u2014 {a['error'] or 'succeeded'}")
+                status_badge = badge("ok", "good") if a["success"] else badge("failed", "bad")
+                st.markdown(
+                    f'{status_badge} <strong>{a["provider"]}</strong> '
+                    f'<span style="color:{TOKENS["text_muted"]}">{a["error"] or "succeeded"}</span>',
+                    unsafe_allow_html=True,
+                )
 
     st.markdown('<div class="rc-eyebrow">Key metrics at a glance</div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
@@ -126,13 +127,27 @@ if st.button("Generate new report", type="primary"):
         st.altair_chart(render_model_mase_chart(facts), use_container_width=True)
     with col2:
         st.caption("Anomaly detection: precision vs recall")
-        st.altair_chart(render_anomaly_pr_chart(facts), use_container_width=True)
+        sub1, sub2 = st.columns(2)
+        with sub1:
+            with st.container(border=True, key="anomaly_chart_0"):
+                st.altair_chart(
+                    render_anomaly_method_chart("Control limits", facts["control_limit_precision"],
+                                                 facts["control_limit_recall"]),
+                    use_container_width=True,
+                )
+        with sub2:
+            with st.container(border=True, key="anomaly_chart_1"):
+                st.altair_chart(
+                    render_anomaly_method_chart("Isolation Forest", facts["isoforest_precision"],
+                                                 facts["isoforest_recall"]),
+                    use_container_width=True,
+                )
 
     if "best_ml_estimated_cost_usd" in facts:
         st.markdown(
             f'<div class="rc-badge rc-badge--neutral" style="font-size:0.82rem">'
             f'Estimated cost of forecast error ({facts["best_ml_model"]}, holdout): '
-            f'${facts["best_ml_estimated_cost_usd"]:,.2f} \u2014 illustrative, based on published '
+            f'${facts["best_ml_estimated_cost_usd"]:,.2f}. Illustrative, based on published '
             f'margin benchmarks, not verified P&amp;L data.</div>',
             unsafe_allow_html=True,
         )
@@ -152,15 +167,16 @@ if st.button("Generate new report", type="primary"):
         st.markdown(result["text"])
 
     st.download_button(
-        "\U0001F4E5 Download this report (.md)",
+        "Download this report (.md)",
         data=build_report_markdown(result["text"], facts, result["provider"], grounding["grounded_ratio"], generated_at),
         file_name=download_filename(result["provider"], generated_at),
         mime="text/markdown",
+        icon=":material/download:",
     )
 
     with st.expander("Flagged numeric claims"):
         ungrounded = [c for c in grounding["claims"] if not c["grounded"]]
-        st.write(ungrounded if ungrounded else "None - every extracted number matched a source figure.")
+        st.write(ungrounded if ungrounded else "None. Every extracted number matched a source figure.")
 
     with st.expander("Source facts used"):
         st.json(facts)
@@ -180,18 +196,19 @@ try:
             created_at = r.get("created_at", "unknown date")
             provider = r.get("provider", "unknown provider")
             ratio = r.get("grounding_ratio", 0)
-            with st.expander(f"{created_at} \u2014 {provider} \u2014 {ratio * 100:.0f}% grounded"):
+            with st.expander(f"{created_at} \u2022 {provider} \u2022 {ratio * 100:.0f}% grounded"):
                 st.markdown(grounding_pill(ratio), unsafe_allow_html=True)
                 st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
                 st.markdown(r["report_text"])
                 st.download_button(
-                    "\U0001F4E5 Download this report (.md)",
+                    "Download this report (.md)",
                     data=build_report_markdown(
                         r["report_text"], r.get("facts", {}), provider,
                         ratio, created_at,
                     ),
                     file_name=download_filename(provider, created_at),
                     mime="text/markdown",
+                    icon=":material/download:",
                     key=f"download_{r.get('id', created_at)}",
                 )
     else:

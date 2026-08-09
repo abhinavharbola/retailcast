@@ -24,28 +24,28 @@ st.markdown("<div style='height: 1.6rem'></div>", unsafe_allow_html=True)
 st.markdown('<div class="rc-eyebrow">Explore</div>', unsafe_allow_html=True)
 
 NAV_CARDS = [
-    ("views/overview.py", "\U0001F4CA", "Overview", "neutral",
+    ("views/overview.py", "Overview", "neutral",
      "Dataset scope, demand pattern classification, stationarity tests."),
-    ("views/forecast_explorer.py", "\U0001F4C9", "Forecast Explorer", "forecast",
+    ("views/forecast_explorer.py", "Forecast Explorer", "forecast",
      "Model comparison and holdout forecast vs. actual, by store and family."),
-    ("views/anomaly_view.py", "\U0001F6A8", "Anomaly View", "anomaly",
+    ("views/anomaly_view.py", "Anomaly View", "anomaly",
      "Control limits vs. Isolation Forest, synthetic-injection evaluation."),
-    ("views/ai_report.py", "\U0001F916", "AI Report", "ai",
+    ("views/ai_report.py", "AI Report", "ai",
      "Grounded GenAI narrative with numeric claim verification."),
 ]
 
 cols = st.columns(4)
-for col, (path, icon, title, accent, caption) in zip(cols, NAV_CARDS):
+for col, (path, title, accent, caption) in zip(cols, NAV_CARDS):
     with col:
         accent_color = TOKENS.get(accent, TOKENS["neutral"])
         st.markdown(
             f'<div class="rc-nav-card" style="--rc-nav-accent: {accent_color}">'
-            f'<div class="rc-card-title">{icon} {title}</div>'
+            f'<div class="rc-card-title">{title}</div>'
             f'<div class="rc-card-body">{caption}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
-        st.page_link(path, label="Open", icon="\u27A1\uFE0F")
+        st.page_link(path, label="Open", icon=":material/arrow_forward:")
 
 st.divider()
 st.caption(

@@ -58,9 +58,9 @@ st.markdown(
     f'<div class="rc-card-body">'
     f'<span class="rc-stat-value" style="font-size:1.5rem">{best_mase:.3f}</span> MASE'
     + (
-        f' &nbsp;&mdash;&nbsp; <span style="color:{TOKENS["good"]}">{vs_naive_pct:.1f}% lower error '
+        f' &nbsp;\u2022&nbsp; <span style="color:{TOKENS["good"]}">{vs_naive_pct:.1f}% lower error '
         f'than a naive seasonal (7-day) baseline</span>' if best_mase < 1
-        else ' &nbsp;&mdash;&nbsp; at or above the naive seasonal baseline (MASE \u2265 1.0)'
+        else ' &nbsp;\u2022&nbsp; at or above the naive seasonal baseline (MASE \u2265 1.0)'
     )
     + f' &nbsp;\u2022&nbsp; {float(best_row["mape"]):.2f}% MAPE &nbsp;\u2022&nbsp; '
     f'{float(best_row["wape"]):.2f}% WAPE'
@@ -97,12 +97,9 @@ with st.container(border=True, key="model_compare"):
         .mark_rule(strokeDash=[4, 3], color=TOKENS["text_faint"])
         .encode(x="x:Q")
     )
-    baseline_label = (
-        alt.Chart(pd.DataFrame({"x": [1.0], "y": [0], "label": ["naive seasonal baseline (MASE=1.0)"]}))
-        .mark_text(align="left", dx=6, dy=-6, color=TOKENS["text_faint"], fontSize=10)
-        .encode(x="x:Q", y=alt.Y("y:Q", axis=None), text="label:N")
-    )
-    st.altair_chart(altair_theme(bars + baseline_rule + baseline_label), use_container_width=True)
+    st.altair_chart(altair_theme(bars + baseline_rule), use_container_width=True)
+    st.caption("Dashed line marks the naive seasonal (7-day) baseline, MASE = 1.0. "
+               "Models to its left beat that baseline; models to its right don't.")
 
     st.dataframe(
         comparison[["source", "model", "mape", "wape", "mase"]],

@@ -8,7 +8,7 @@ from dashboard.theme import TOKENS, altair_theme, inject, page_header
 from src.storage.supabase_client import save_anomaly_flags
 from src.utils.config import CONFIG
 
-inject(accent_rails={"eval_chart": "anomaly", "flagged_table": "anomaly"})
+inject(accent_rails={"eval_chart_0": "anomaly", "eval_chart_1": "anomaly", "flagged_table": "anomaly"})
 
 page_header(
     eyebrow="Anomaly detection - synthetic-injection eval",
@@ -41,7 +41,7 @@ st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Synthetic-inj
             .format(TOKENS["anomaly"]), unsafe_allow_html=True)
 
 method_cols = st.columns(len(eval_metrics))
-for col, (method, row) in zip(method_cols, eval_metrics.iterrows()):
+for i, (col, (method, row)) in enumerate(zip(method_cols, eval_metrics.iterrows())):
     label, note = METHOD_LABELS.get(method, (method, ""))
     with col:
         st.markdown(
@@ -57,33 +57,33 @@ for col, (method, row) in zip(method_cols, eval_metrics.iterrows()):
             f'</div><div class="rc-card-body">{note}</div></div>',
             unsafe_allow_html=True,
         )
-
-with st.container(border=True, key="eval_chart"):
-    long_metrics = eval_metrics.reset_index().melt(
-        id_vars="index", value_vars=["precision", "recall", "f1"],
-        var_name="metric", value_name="score",
-    )
-    long_metrics["method"] = long_metrics["index"].map(lambda m: METHOD_LABELS.get(m, (m, ""))[0])
-    chart = (
-        alt.Chart(long_metrics)
-        .mark_bar(cornerRadiusEnd=2)
-        .encode(
-            y=alt.Y("method:N", title=None),
-            x=alt.X("score:Q", scale=alt.Scale(domain=[0, 1])),
-            color=alt.Color(
-                "metric:N",
-                scale=alt.Scale(
-                    domain=["precision", "recall", "f1"],
-                    range=[TOKENS["anomaly"], TOKENS["forecast"], TOKENS["text_muted"]],
-                ),
-                legend=alt.Legend(title=None, orient="top"),
-            ),
-            yOffset="metric:N",
-            tooltip=["method", "metric", alt.Tooltip("score:Q", format=".2f")],
-        )
-        .properties(height=140)
-    )
-    st.altair_chart(altair_theme(chart), use_container_width=True)
+        # One chart per method (rather than one grouped chart for both) - keeps every
+        # bar on its own row with no offset/banding, so axis labels can't collide
+        # regardless of how narrow the column gets.
+        with st.container(border=True, key=f"eval_chart_{i}"):
+            metric_df = pd.DataFrame({
+                "metric": ["precision", "recall", "f1"],
+                "score": [row["precision"], row["recall"], row["f1"]],
+            })
+            chart = (
+                alt.Chart(metric_df)
+                .mark_bar(cornerRadiusEnd=2, size=20)
+                .encode(
+                    y=alt.Y("metric:N", sort=["precision", "recall", "f1"], title=None),
+                    x=alt.X("score:Q", scale=alt.Scale(domain=[0, 1]), title=None),
+                    color=alt.Color(
+                        "metric:N",
+                        scale=alt.Scale(
+                            domain=["precision", "recall", "f1"],
+                            range=[TOKENS["anomaly"], TOKENS["forecast"], TOKENS["text_muted"]],
+                        ),
+                        legend=None,
+                    ),
+                    tooltip=["metric", alt.Tooltip("score:Q", format=".2f")],
+                )
+                .properties(height=120)
+            )
+            st.altair_chart(altair_theme(chart), use_container_width=True)
 
 st.divider()
 st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Flagged anomalies on real holdout data</div>'
@@ -94,8 +94,8 @@ c1, c2, c3 = st.columns(3)
 c1.metric("Control-limit flags", int(results["control_limit_flag"].sum()))
 c2.metric("IsolationForest flags", int(results["isoforest_flag"].sum()))
 c3.metric("Flagged by both", both_flagged)
-st.caption("Points flagged by both methods are the higher-confidence anomalies - "
-           "highlighted below when viewing 'either'.")
+st.caption("Points flagged by both methods are the higher-confidence anomalies. "
+           "Highlighted below when viewing 'either'.")
 
 method = st.radio("Filter by method", ["control_limit_flag", "isoforest_flag", "either"], horizontal=True)
 if method == "either":
