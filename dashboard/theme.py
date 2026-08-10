@@ -31,7 +31,7 @@ TOKENS = {
     "ai": "#7C6FF0",
     "good": "#35C87A",
     "bad": "#F1554C",
-    "neutral": "#4C5A6B",
+    "neutral": "#64748B",
 }
 
 _CSS = f"""
@@ -117,9 +117,17 @@ hr {{
     border-left: 3px solid var(--rc-nav-accent, {TOKENS["neutral"]});
     border-radius: 4px;
     padding: 1rem 1.2rem;
-    height: 100%;
+    min-height: 152px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 }}
 .rc-nav-card .rc-card-title {{ display: flex; align-items: center; gap: 0.5rem; }}
+
+/* ---- side-by-side comparison cards (e.g. two detection methods) - fixed min-height so
+   paired cards (and whatever sits below them, like a chart) line up across columns even
+   when one card's body text runs longer than the other's ---- */
+.rc-compare-card {{ min-height: 172px; }}
 
 /* ---- stat blocks (custom, mono numerals) ---- */
 .rc-stat-value {{
@@ -194,6 +202,10 @@ hr {{
 /* container-key targeted accent rails (bordered st.container blocks that must hold
    live widgets/dataframes/charts, so can't be plain markdown HTML) */
 {{accent_rail_rules}}
+
+/* Overview page: store/family badge lists sit side by side and can wrap to different
+   line counts (10 stores vs 6 longer family names) - fixed min-height keeps them level. */
+.st-key-selected_stores, .st-key-selected_families {{ min-height: 120px; }}
 </style>
 """
 

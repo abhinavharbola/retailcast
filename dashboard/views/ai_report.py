@@ -73,16 +73,19 @@ def render_model_mase_chart(facts):
     return altair_theme(chart)
 
 
-def render_anomaly_method_chart(method_label, precision, recall):
+def render_anomaly_method_chart(precision, recall):
     # One chart per method (no yOffset grouping) - every bar gets its own row so axis
-    # labels can't collide, regardless of how narrow the column gets.
+    # labels can't collide, regardless of how narrow the column gets. The method label
+    # is rendered as an st.caption above the chart, not as a Vega-Lite chart title -
+    # keeps this identical in structure to the (working) anomaly_view.py version.
     df = pd.DataFrame({"metric": ["precision", "recall"], "score": [precision, recall]})
     chart = (
         alt.Chart(df)
         .mark_bar(cornerRadiusEnd=2, size=20)
         .encode(
             y=alt.Y("metric:N", sort=["precision", "recall"], title=None),
-            x=alt.X("score:Q", scale=alt.Scale(domain=[0, 1]), title=None),
+            x=alt.X("score:Q", scale=alt.Scale(domain=[0, 1]), title=None,
+                     axis=alt.Axis(values=[0, 0.2, 0.4, 0.6, 0.8, 1.0])),
             color=alt.Color(
                 "metric:N",
                 scale=alt.Scale(domain=["precision", "recall"], range=[TOKENS["anomaly"], TOKENS["forecast"]]),
@@ -90,7 +93,7 @@ def render_anomaly_method_chart(method_label, precision, recall):
             ),
             tooltip=["metric", alt.Tooltip("score:Q", format=".2f")],
         )
-        .properties(height=90, title=method_label)
+        .properties(height=110)
     )
     return altair_theme(chart)
 
@@ -130,16 +133,18 @@ if st.button("Generate new report", type="primary"):
         sub1, sub2 = st.columns(2)
         with sub1:
             with st.container(border=True, key="anomaly_chart_0"):
+                st.markdown('<div class="rc-card-title" style="font-size:0.92rem">Control limits</div>',
+                            unsafe_allow_html=True)
                 st.altair_chart(
-                    render_anomaly_method_chart("Control limits", facts["control_limit_precision"],
-                                                 facts["control_limit_recall"]),
+                    render_anomaly_method_chart(facts["control_limit_precision"], facts["control_limit_recall"]),
                     use_container_width=True,
                 )
         with sub2:
             with st.container(border=True, key="anomaly_chart_1"):
+                st.markdown('<div class="rc-card-title" style="font-size:0.92rem">Isolation Forest</div>',
+                            unsafe_allow_html=True)
                 st.altair_chart(
-                    render_anomaly_method_chart("Isolation Forest", facts["isoforest_precision"],
-                                                 facts["isoforest_recall"]),
+                    render_anomaly_method_chart(facts["isoforest_precision"], facts["isoforest_recall"]),
                     use_container_width=True,
                 )
 
@@ -166,20 +171,23 @@ if st.button("Generate new report", type="primary"):
     with st.container(border=True, key="narrative_card"):
         st.markdown(result["text"])
 
-    st.download_button(
-        "Download this report (.md)",
-        data=build_report_markdown(result["text"], facts, result["provider"], grounding["grounded_ratio"], generated_at),
-        file_name=download_filename(result["provider"], generated_at),
-        mime="text/markdown",
-        icon=":material/download:",
-    )
-
-    with st.expander("Flagged numeric claims"):
-        ungrounded = [c for c in grounding["claims"] if not c["grounded"]]
-        st.write(ungrounded if ungrounded else "None. Every extracted number matched a source figure.")
-
-    with st.expander("Source facts used"):
-        st.json(facts)
+    dl_col, claims_col, facts_col = st.columns(3)
+    with dl_col:
+        st.download_button(
+            "Download this report (.md)",
+            data=build_report_markdown(result["text"], facts, result["provider"], grounding["grounded_ratio"], generated_at),
+            file_name=download_filename(result["provider"], generated_at),
+            mime="text/markdown",
+            icon=":material/download:",
+            use_container_width=True,
+        )
+    with claims_col:
+        with st.expander("Flagged numeric claims"):
+            ungrounded = [c for c in grounding["claims"] if not c["grounded"]]
+            st.write(ungrounded if ungrounded else "None. Every extracted number matched a source figure.")
+    with facts_col:
+        with st.expander("Source facts used"):
+            st.json(facts)
 
     try:
         save_report(result["text"], facts, result["provider"], grounding["grounded_ratio"])

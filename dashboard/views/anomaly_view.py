@@ -45,7 +45,7 @@ for i, (col, (method, row)) in enumerate(zip(method_cols, eval_metrics.iterrows(
     label, note = METHOD_LABELS.get(method, (method, ""))
     with col:
         st.markdown(
-            f'<div class="rc-card rc-card--anomaly">'
+            f'<div class="rc-card rc-card--anomaly rc-compare-card">'
             f'<div class="rc-card-title">{label}</div>'
             f'<div style="display:flex; gap:1.4rem; margin: 0.5rem 0 0.3rem 0;">'
             f'<div><div class="rc-stat-value" style="font-size:1.4rem">{row["precision"]:.2f}</div>'
@@ -70,7 +70,8 @@ for i, (col, (method, row)) in enumerate(zip(method_cols, eval_metrics.iterrows(
                 .mark_bar(cornerRadiusEnd=2, size=20)
                 .encode(
                     y=alt.Y("metric:N", sort=["precision", "recall", "f1"], title=None),
-                    x=alt.X("score:Q", scale=alt.Scale(domain=[0, 1]), title=None),
+                    x=alt.X("score:Q", scale=alt.Scale(domain=[0, 1]), title=None,
+                            axis=alt.Axis(values=[0, 0.2, 0.4, 0.6, 0.8, 1.0])),
                     color=alt.Color(
                         "metric:N",
                         scale=alt.Scale(
@@ -81,7 +82,7 @@ for i, (col, (method, row)) in enumerate(zip(method_cols, eval_metrics.iterrows(
                     ),
                     tooltip=["metric", alt.Tooltip("score:Q", format=".2f")],
                 )
-                .properties(height=120)
+                .properties(height=130)
             )
             st.altair_chart(altair_theme(chart), use_container_width=True)
 
