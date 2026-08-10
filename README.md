@@ -132,7 +132,7 @@ retailcast/
 │       └── ai_report.py                  # GenAI narrative, key-metric charts, grounding-check status
 │
 ├── .streamlit/
-│   └── config.toml                       # theme: dark base, matches dashboard/theme.py tokens
+│   └── config.toml                       # theme: light base, matches dashboard/theme.py tokens
 │
 ├── configs/
 │   └── config.yaml                       # selected stores/families, horizon, CV folds, cost-per-unit, thresholds

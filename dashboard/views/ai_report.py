@@ -12,7 +12,7 @@ from src.storage.supabase_client import fetch_reports, save_report
 from src.utils.config import CONFIG
 
 inject(accent_rails={
-    "narrative_card": "ai", "fallback_log": "ai",
+    "narrative_card": "ai", "fallback_log": "ai", "model_compare_ai": "forecast",
     "anomaly_chart_0": "anomaly", "anomaly_chart_1": "anomaly",
 })
 
@@ -127,7 +127,8 @@ if st.button("Generate new report", type="primary"):
     col1, col2 = st.columns(2)
     with col1:
         st.caption("Forecasting: MASE on holdout (lower is better)")
-        st.altair_chart(render_model_mase_chart(facts), use_container_width=True)
+        with st.container(border=True, key="model_compare_ai"):
+            st.altair_chart(render_model_mase_chart(facts), use_container_width=True)
     with col2:
         st.caption("Anomaly detection: precision vs recall")
         sub1, sub2 = st.columns(2)

@@ -19,19 +19,19 @@ raw st.markdown/st.metric calls for anything that should carry that color coding
 import streamlit as st
 
 TOKENS = {
-    "bg": "#0A0E13",
-    "surface": "#12171F",
-    "surface_hover": "#171E29",
-    "border": "#232B36",
-    "text": "#E7EBF0",
-    "text_muted": "#8D97A6",
-    "text_faint": "#56606E",
-    "forecast": "#2FB8A6",
-    "anomaly": "#E3A008",
-    "ai": "#7C6FF0",
-    "good": "#35C87A",
-    "bad": "#F1554C",
-    "neutral": "#64748B",
+    "bg": "#F7F4EE",
+    "surface": "#FFFFFF",
+    "surface_hover": "#FBF9F4",
+    "border": "#E4DFD3",
+    "text": "#2B2A26",
+    "text_muted": "#6E6A61",
+    "text_faint": "#9C978C",
+    "forecast": "#1E8A76",
+    "anomaly": "#B27A0E",
+    "ai": "#6355C2",
+    "good": "#2E9457",
+    "bad": "#C1493F",
+    "neutral": "#8C8779",
 }
 
 _CSS = f"""
@@ -87,9 +87,10 @@ hr {{
     background: {TOKENS["surface"]};
     border: 1px solid {TOKENS["border"]};
     border-left: 3px solid {TOKENS["neutral"]};
-    border-radius: 4px;
+    border-radius: 6px;
     padding: 1.1rem 1.3rem;
     margin-bottom: 0.9rem;
+    box-shadow: 0 1px 2px rgba(43,42,38,0.04), 0 1px 6px rgba(43,42,38,0.03);
 }}
 .rc-card--forecast {{ border-left-color: {TOKENS["forecast"]}; }}
 .rc-card--anomaly  {{ border-left-color: {TOKENS["anomaly"]}; }}
@@ -110,24 +111,15 @@ hr {{
     line-height: 1.5;
 }}
 
-/* ---- nav cards on Home (clickable via st.page_link, styled through the wrapper) ---- */
-.rc-nav-card {{
-    background: {TOKENS["surface"]};
-    border: 1px solid {TOKENS["border"]};
-    border-left: 3px solid var(--rc-nav-accent, {TOKENS["neutral"]});
-    border-radius: 4px;
-    padding: 1rem 1.2rem;
-    min-height: 152px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-}}
-.rc-nav-card .rc-card-title {{ display: flex; align-items: center; gap: 0.5rem; }}
-
 /* ---- side-by-side comparison cards (e.g. two detection methods) - fixed min-height so
    paired cards (and whatever sits below them, like a chart) line up across columns even
    when one card's body text runs longer than the other's ---- */
 .rc-compare-card {{ min-height: 172px; }}
+/* Nav cards on Home use real st.container(border=True) blocks (see home.py) rather than
+   raw HTML, specifically so st.page_link can render inside the box - markdown HTML can't
+   contain live Streamlit widgets. min-height keeps all 4 level regardless of description
+   length; accent color comes from the accent_rails mechanism like every other container. */
+.st-key-nav_0, .st-key-nav_1, .st-key-nav_2, .st-key-nav_3 {{ min-height: 168px; }}
 
 /* ---- stat blocks (custom, mono numerals) ---- */
 .rc-stat-value {{
@@ -158,12 +150,12 @@ hr {{
     border: 1px solid transparent;
     white-space: nowrap;
 }}
-.rc-badge--neutral  {{ background: rgba(76,90,107,0.18);  color: {TOKENS["text_muted"]}; border-color: {TOKENS["border"]}; }}
-.rc-badge--forecast {{ background: rgba(47,184,166,0.12); color: {TOKENS["forecast"]}; border-color: rgba(47,184,166,0.35); }}
-.rc-badge--anomaly  {{ background: rgba(227,160,8,0.12);  color: {TOKENS["anomaly"]}; border-color: rgba(227,160,8,0.35); }}
-.rc-badge--ai       {{ background: rgba(124,111,240,0.12);color: {TOKENS["ai"]}; border-color: rgba(124,111,240,0.35); }}
-.rc-badge--good     {{ background: rgba(53,200,122,0.12); color: {TOKENS["good"]}; border-color: rgba(53,200,122,0.35); }}
-.rc-badge--bad      {{ background: rgba(241,85,76,0.12);  color: {TOKENS["bad"]}; border-color: rgba(241,85,76,0.35); }}
+.rc-badge--neutral  {{ background: rgba(140,135,121,0.16); color: {TOKENS["text_muted"]}; border-color: {TOKENS["border"]}; }}
+.rc-badge--forecast {{ background: rgba(30,138,118,0.12);  color: {TOKENS["forecast"]}; border-color: rgba(30,138,118,0.35); }}
+.rc-badge--anomaly  {{ background: rgba(178,122,14,0.12);  color: {TOKENS["anomaly"]}; border-color: rgba(178,122,14,0.35); }}
+.rc-badge--ai       {{ background: rgba(99,85,194,0.12);   color: {TOKENS["ai"]}; border-color: rgba(99,85,194,0.35); }}
+.rc-badge--good     {{ background: rgba(46,148,87,0.12);   color: {TOKENS["good"]}; border-color: rgba(46,148,87,0.35); }}
+.rc-badge--bad      {{ background: rgba(193,73,63,0.12);   color: {TOKENS["bad"]}; border-color: rgba(193,73,63,0.35); }}
 
 /* ---- status pill (grounding ratio, etc: bigger, standalone) ---- */
 .rc-pill {{
@@ -177,9 +169,9 @@ hr {{
     border-radius: 4px;
     border: 1px solid;
 }}
-.rc-pill--good {{ background: rgba(53,200,122,0.10); color: {TOKENS["good"]}; border-color: rgba(53,200,122,0.4); }}
-.rc-pill--warn {{ background: rgba(227,160,8,0.10);  color: {TOKENS["anomaly"]}; border-color: rgba(227,160,8,0.4); }}
-.rc-pill--bad  {{ background: rgba(241,85,76,0.10);  color: {TOKENS["bad"]}; border-color: rgba(241,85,76,0.4); }}
+.rc-pill--good {{ background: rgba(46,148,87,0.10);  color: {TOKENS["good"]}; border-color: rgba(46,148,87,0.4); }}
+.rc-pill--warn {{ background: rgba(178,122,14,0.10);  color: {TOKENS["anomaly"]}; border-color: rgba(178,122,14,0.4); }}
+.rc-pill--bad  {{ background: rgba(193,73,63,0.10);   color: {TOKENS["bad"]}; border-color: rgba(193,73,63,0.4); }}
 .rc-pill-dot {{ width: 7px; height: 7px; border-radius: 50%; background: currentColor; }}
 
 /* ---- native Streamlit widgets, restyled to match ---- */
@@ -197,6 +189,12 @@ hr {{
 [data-testid="stDataFrame"] {{
     border: 1px solid {TOKENS["border"]};
     border-radius: 4px;
+}}
+/* Defensive: make sure markdown text content always fills its column instead of
+   shrinking to some narrower intrinsic width (was causing early line-wraps with dead
+   space on the right in card bodies). */
+div[data-testid="stMarkdownContainer"] {{
+    width: 100%;
 }}
 
 /* container-key targeted accent rails (bordered st.container blocks that must hold
@@ -224,7 +222,8 @@ def inject(accent_rails: dict[str, str] | None = None) -> None:
             color = TOKENS.get(token, TOKENS["neutral"])
             rules.append(
                 f'.st-key-{key} {{ border-left: 3px solid {color} !important; '
-                f'border-radius: 4px !important; }}'
+                f'border-radius: 6px !important; '
+                f'box-shadow: 0 1px 2px rgba(43,42,38,0.04), 0 1px 6px rgba(43,42,38,0.03) !important; }}'
             )
     css = _CSS.replace("{accent_rail_rules}", "\n".join(rules))
     st.markdown(css, unsafe_allow_html=True)
