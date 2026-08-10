@@ -32,6 +32,11 @@ TOKENS = {
     "good": "#2E9457",
     "bad": "#C1493F",
     "neutral": "#8C8779",
+    # Lighter than "neutral" specifically for de-emphasized chart fills (e.g. non-winning
+    # bars in a comparison chart) - a large solid area at "neutral"'s darkness reads as
+    # heavy/muddy next to a highlight color, whereas a thin line or small badge at that
+    # same darkness reads fine. Bars need a lighter touch; text/lines keep using "neutral".
+    "chart_muted": "#D3CBBC",
 }
 
 _CSS = f"""
@@ -66,6 +71,12 @@ hr {{
     color: var(--rc-eyebrow-color, {TOKENS["text_muted"]});
     margin-bottom: 0.35rem;
 }}
+/* Page-level eyebrow+title (page_header()) is centered; inline section eyebrows used
+   elsewhere in a page's body (e.g. "Explore", "Key metrics at a glance") stay left-
+   aligned via the base .rc-eyebrow rule above - this modifier only applies where added. */
+.rc-eyebrow--page {{
+    text-align: center;
+}}
 .rc-h1 {{
     font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
@@ -73,12 +84,13 @@ hr {{
     line-height: 1.15;
     color: {TOKENS["text"]};
     margin: 0 0 0.4rem 0;
+    text-align: center;
 }}
 .rc-sub {{
     font-family: 'Inter', sans-serif;
     font-size: 0.98rem;
     color: {TOKENS["text_muted"]};
-    max-width: 46rem;
+    width: 100%;
     margin: 0 0 1.1rem 0;
 }}
 
@@ -204,6 +216,12 @@ div[data-testid="stMarkdownContainer"] {{
 /* Overview page: store/family badge lists sit side by side and can wrap to different
    line counts (10 stores vs 6 longer family names) - fixed min-height keeps them level. */
 .st-key-selected_stores, .st-key-selected_families {{ min-height: 120px; }}
+
+/* AI Report page: the MASE chart box and the two anomaly-method chart boxes sit side by
+   side but naturally differ in height (3 rows vs 2, plus one has an x-axis title the
+   others don't) - fixed height forces all three to match instead of the shorter ones
+   trailing off mid-row. */
+.st-key-model_compare_ai, .st-key-anomaly_chart_0, .st-key-anomaly_chart_1 {{ height: 215px; }}
 </style>
 """
 
@@ -233,7 +251,7 @@ def page_header(eyebrow: str, title: str, subtitle: str = "", accent: str = "neu
     color = TOKENS.get(accent, TOKENS["neutral"])
     sub_html = f'<p class="rc-sub">{subtitle}</p>' if subtitle else ""
     st.markdown(
-        f'<div class="rc-eyebrow" style="--rc-eyebrow-color:{color}">{eyebrow}</div>'
+        f'<div class="rc-eyebrow rc-eyebrow--page" style="--rc-eyebrow-color:{color}">{eyebrow}</div>'
         f'<div class="rc-h1">{title}</div>'
         f'{sub_html}',
         unsafe_allow_html=True,

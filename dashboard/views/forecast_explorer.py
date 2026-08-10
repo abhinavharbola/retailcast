@@ -73,7 +73,15 @@ st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Model compari
 
 with st.container(border=True, key="model_compare"):
     chart_df = comparison.copy()
-    chart_df["label"] = chart_df["source"]
+    # Bug fix: previously every row used chart_df["source"] as its chart label, but
+    # ml_holdout keeps one row PER ML model (lightgbm, xgboost) both labeled "ML (global)".
+    # Two rows sharing one y-axis category makes Vega-Lite stack them into a single bar,
+    # so the bar's length became the SUM of both models' MASE instead of showing either
+    # one - and it's more useful this way anyway: it shows LightGBM vs XGBoost separately
+    # instead of hiding one behind the other.
+    chart_df["label"] = chart_df.apply(
+        lambda r: r["model"] if r["source"] == "ML (global)" else r["source"], axis=1
+    )
     chart_df["is_best"] = chart_df["model"] == best_row["model"]
 
     bars = (
@@ -85,7 +93,7 @@ with st.container(border=True, key="model_compare"):
             color=alt.condition(
                 alt.datum.is_best,
                 alt.value(TOKENS["forecast"]),
-                alt.value(TOKENS["neutral"]),
+                alt.value(TOKENS["chart_muted"]),
             ),
             tooltip=["source", "model", alt.Tooltip("mase:Q", format=".3f"),
                       alt.Tooltip("mape:Q", format=".2f"), alt.Tooltip("wape:Q", format=".2f")],
@@ -146,7 +154,7 @@ with st.container(border=True, key="series_chart"):
                     "series:N",
                     scale=alt.Scale(
                         domain=["sales", "forecast"],
-                        range=[TOKENS["text_muted"], TOKENS["forecast"]],
+                        range=[TOKENS["neutral"], TOKENS["forecast"]],
                     ),
                     legend=alt.Legend(title=None, orient="top"),
                 ),
