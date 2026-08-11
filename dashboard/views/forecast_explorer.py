@@ -105,13 +105,13 @@ with st.container(border=True, key="model_compare"):
         .mark_rule(strokeDash=[4, 3], color=TOKENS["text_faint"])
         .encode(x="x:Q")
     )
-    st.altair_chart(altair_theme(bars + baseline_rule), use_container_width=True)
+    st.altair_chart(altair_theme(bars + baseline_rule), width='stretch')
     st.caption("Dashed line marks the naive seasonal (7-day) baseline, MASE = 1.0. "
                "Models to its left beat that baseline; models to its right don't.")
 
     st.dataframe(
         comparison[["source", "model", "mape", "wape", "mase"]],
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
     if st.button("Log this comparison to Supabase"):
@@ -162,5 +162,5 @@ with st.container(border=True, key="series_chart"):
             )
             .properties(height=320)
         )
-        st.altair_chart(altair_theme(line), use_container_width=True)
+        st.altair_chart(altair_theme(line), width='stretch')
         st.caption(f"Predictions shown are from {best_row['model']}, the best model on holdout MASE.")

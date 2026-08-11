@@ -25,6 +25,8 @@ page_header(
 )
 
 DATA_DIR = str(Path(CONFIG["data"]["kaggle_outputs_dir"]))
+# Shared by all three "Key metrics at a glance" charts so their boxes come out the same height by construction.
+CHART_BOX_HEIGHT = 130
 
 
 def build_report_markdown(text, facts, provider, grounding_ratio, created_at=None):
@@ -64,20 +66,16 @@ def render_model_mase_chart(facts):
         .mark_bar(cornerRadiusEnd=2)
         .encode(
             y=alt.Y("model:N", sort="-x", title=None),
-            x=alt.X("mase:Q", title="MASE (lower is better)"),
+            x=alt.X("mase:Q", title=None),
             color=alt.condition(alt.datum.is_best, alt.value(TOKENS["forecast"]), alt.value(TOKENS["neutral"])),
             tooltip=["model", alt.Tooltip("mase:Q", format=".3f")],
         )
-        .properties(height=130)
+        .properties(height=CHART_BOX_HEIGHT)
     )
     return altair_theme(chart)
 
 
 def render_anomaly_method_chart(precision, recall):
-    # One chart per method (no yOffset grouping) - every bar gets its own row so axis
-    # labels can't collide, regardless of how narrow the column gets. The method label
-    # is rendered as an st.caption above the chart, not as a Vega-Lite chart title -
-    # keeps this identical in structure to the (working) anomaly_view.py version.
     df = pd.DataFrame({"metric": ["precision", "recall"], "score": [precision, recall]})
     chart = (
         alt.Chart(df)
@@ -93,12 +91,17 @@ def render_anomaly_method_chart(precision, recall):
             ),
             tooltip=["metric", alt.Tooltip("score:Q", format=".2f")],
         )
-        .properties(height=110)
+        .properties(height=CHART_BOX_HEIGHT)
     )
     return altair_theme(chart)
 
 
-if st.button("Generate new report", type="primary"):
+# Center the button using columns with proper proportions
+col1, col2, col3 = st.columns([3, 1, 3])
+with col2:
+    generate_clicked = st.button("Generate new report", type="primary")
+    
+if generate_clicked:
     with st.spinner("Calling LLM provider..."):
         try:
             result = generate_narrative(DATA_DIR)
@@ -109,8 +112,6 @@ if st.button("Generate new report", type="primary"):
     grounding = check_grounding(result["text"], result["facts"])
     facts = result["facts"]
     generated_at = datetime.now(timezone.utc).isoformat()
-
-    st.success(f"Generated using: {result['provider']}")
 
     fallback_happened = any(a["provider"] != result["provider"] for a in result["attempts"])
     with st.container(border=True, key="fallback_log"):
@@ -124,30 +125,30 @@ if st.button("Generate new report", type="primary"):
                 )
 
     st.markdown('<div class="rc-eyebrow">Key metrics at a glance</div>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
+    
+    # Single row of three equal columns with identical structure
+    col1, col2, col3 = st.columns(3)
+    
     with col1:
-        st.caption("Forecasting: MASE on holdout (lower is better)")
         with st.container(border=True, key="model_compare_ai"):
-            st.altair_chart(render_model_mase_chart(facts), use_container_width=True)
+            st.altair_chart(render_model_mase_chart(facts), width='stretch')
+            st.markdown('<p style="text-align: center; color: #888; font-size: 0.8rem;">Forecasting: MASE on holdout (lower is better)</p>', unsafe_allow_html=True)
+    
     with col2:
-        st.caption("Anomaly detection: precision vs recall")
-        sub1, sub2 = st.columns(2)
-        with sub1:
-            with st.container(border=True, key="anomaly_chart_0"):
-                st.markdown('<div class="rc-card-title" style="font-size:0.92rem">Control limits</div>',
-                            unsafe_allow_html=True)
-                st.altair_chart(
-                    render_anomaly_method_chart(facts["control_limit_precision"], facts["control_limit_recall"]),
-                    use_container_width=True,
-                )
-        with sub2:
-            with st.container(border=True, key="anomaly_chart_1"):
-                st.markdown('<div class="rc-card-title" style="font-size:0.92rem">Isolation Forest</div>',
-                            unsafe_allow_html=True)
-                st.altair_chart(
-                    render_anomaly_method_chart(facts["isoforest_precision"], facts["isoforest_recall"]),
-                    use_container_width=True,
-                )
+        with st.container(border=True, key="anomaly_chart_0"):
+            st.altair_chart(
+                render_anomaly_method_chart(facts["control_limit_precision"], facts["control_limit_recall"]),
+                width='stretch',
+            )
+            st.markdown('<p style="text-align: center; color: #888; font-size: 0.8rem;">Anomaly: Control limits</p>', unsafe_allow_html=True)
+    
+    with col3:
+        with st.container(border=True, key="anomaly_chart_1"):
+            st.altair_chart(
+                render_anomaly_method_chart(facts["isoforest_precision"], facts["isoforest_recall"]),
+                width='stretch',
+            )
+            st.markdown('<p style="text-align: center; color: #888; font-size: 0.8rem;">Anomaly: Isolation Forest</p>', unsafe_allow_html=True)
 
     if "best_ml_estimated_cost_usd" in facts:
         st.markdown(
@@ -159,12 +160,32 @@ if st.button("Generate new report", type="primary"):
         )
 
     st.markdown("<div style='height:0.9rem'></div>", unsafe_allow_html=True)
-    st.markdown(grounding_pill(grounding["grounded_ratio"]), unsafe_allow_html=True)
-    st.caption(
-        "Regex-based numeric check, not full claim verification. It can miss "
-        "paraphrased claims with no literal number, and can flag numbers that are "
-        "correct but simply aren't in the source facts. Treat a low ratio as "
-        "'needs review,' not 'definitely wrong.'"
+    st.markdown(
+        f"""
+        <div style="
+            display: inline-flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 0.55rem 0.8rem;
+            border: 1px solid #9acfae;
+            border-radius: 0.35rem;
+            background: #edf7ef;
+            color: #2d9a61;
+            font-size: 0.9rem;
+            line-height: 1.45;
+        ">
+            <strong style="white-space: nowrap;">● {grounding["grounded_ratio"] * 100:.0f}% grounded</strong>
+            <span style="color: #7d817d;">
+                Regex-based numeric check, not full claim verification. It can miss
+                paraphrased claims with no literal number, and can flag numbers that are
+                correct but simply aren't in the source facts. Treat a low ratio as
+                'needs review,' not 'definitely wrong.'
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Narrative</div>'
@@ -180,7 +201,7 @@ if st.button("Generate new report", type="primary"):
             file_name=download_filename(result["provider"], generated_at),
             mime="text/markdown",
             icon=":material/download:",
-            use_container_width=True,
+            width='stretch',
         )
     with claims_col:
         with st.expander("Flagged numeric claims"):

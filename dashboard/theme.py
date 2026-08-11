@@ -92,6 +92,7 @@ hr {{
     color: {TOKENS["text_muted"]};
     width: 100%;
     margin: 0 0 1.1rem 0;
+    text-align: center;
 }}
 
 /* ---- cards (static / text content only - can't hold live widgets) ---- */
@@ -218,10 +219,10 @@ div[data-testid="stMarkdownContainer"] {{
 .st-key-selected_stores, .st-key-selected_families {{ min-height: 120px !important; }}
 
 /* AI Report page: the MASE chart box and the two anomaly-method chart boxes sit side by
-   side but naturally differ in height (3 rows vs 2, plus one has an x-axis title the
-   others don't) - fixed height forces all three to match instead of the shorter ones
-   trailing off mid-row. */
-.st-key-model_compare_ai, .st-key-anomaly_chart_0, .st-key-anomaly_chart_1 {{ height: 215px !important; }}
+   side. Primary fix is structural now (see ai_report.py: all three containers hold only
+   a chart at the same height, no title text inside any of them, so they're equal by
+   construction) - this is just a safety-net floor, not the mechanism doing the real work. */
+.st-key-model_compare_ai, .st-key-anomaly_chart_0, .st-key-anomaly_chart_1 {{ min-height: 165px !important; }}
 </style>
 """
 
@@ -320,7 +321,7 @@ def grounding_pill(ratio: float) -> str:
 
 def altair_theme(chart):
     """Applies the shared palette/typography to an Altair chart. Call right before
-    st.altair_chart(chart, use_container_width=True)."""
+    st.altair_chart(chart, width='stretch')."""
     return (
         chart.properties(background=TOKENS["surface"])
         .configure_view(strokeWidth=0)

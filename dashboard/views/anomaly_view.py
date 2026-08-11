@@ -84,7 +84,7 @@ for i, (col, (method, row)) in enumerate(zip(method_cols, eval_metrics.iterrows(
                 )
                 .properties(height=130)
             )
-            st.altair_chart(altair_theme(chart), use_container_width=True)
+            st.altair_chart(altair_theme(chart), width='stretch')
 
 st.divider()
 st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Flagged anomalies on real holdout data</div>'
@@ -114,9 +114,9 @@ with st.container(border=True, key="flagged_table"):
             agree = row["control_limit_flag"] == 1 and row["isoforest_flag"] == 1
             style = f"background-color: {TOKENS['anomaly']}22" if agree else ""
             return [style] * len(row)
-        st.dataframe(flagged_display.style.apply(_co_detect_style, axis=1), use_container_width=True)
+        st.dataframe(flagged_display.style.apply(_co_detect_style, axis=1), width='stretch')
     else:
-        st.dataframe(flagged_display, use_container_width=True)
+        st.dataframe(flagged_display, width='stretch')
 
     if st.button("Log flagged anomalies to Supabase"):
         to_log = flagged_display.copy()

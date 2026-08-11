@@ -78,13 +78,13 @@ with st.container(border=True, key="pattern_card"):
         )
         .properties(height=160)
     )
-    st.altair_chart(altair_theme(chart), use_container_width=True)
+    st.altair_chart(altair_theme(chart), width='stretch')
 
     def _pattern_style(row):
         color = pattern_colors.get(row["pattern"], TOKENS["neutral"])
         return [f"background-color: {color}22; color: {color}" if col == "pattern" else "" for col in row.index]
 
-    st.dataframe(pattern.style.apply(_pattern_style, axis=1), use_container_width=True)
+    st.dataframe(pattern.style.apply(_pattern_style, axis=1), width='stretch')
 
 st.divider()
 st.markdown('<div class="rc-eyebrow">Stationarity (ADF test)</div>', unsafe_allow_html=True)
@@ -103,4 +103,4 @@ with st.container(border=True, key="stationarity_card"):
         unsafe_allow_html=True,
     )
     st.caption(pill_note)
-    st.dataframe(stationarity, use_container_width=True)
+    st.dataframe(stationarity, width='stretch')
