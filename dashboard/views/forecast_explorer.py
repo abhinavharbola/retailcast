@@ -154,7 +154,7 @@ with st.container(border=True, key="series_chart"):
                     "series:N",
                     scale=alt.Scale(
                         domain=["sales", "forecast"],
-                        range=[TOKENS["neutral"], TOKENS["forecast"]],
+                        range=[TOKENS["text"], TOKENS["forecast"]],
                     ),
                     legend=alt.Legend(title=None, orient="top"),
                 ),

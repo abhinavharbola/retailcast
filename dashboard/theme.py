@@ -131,7 +131,7 @@ hr {{
    raw HTML, specifically so st.page_link can render inside the box - markdown HTML can't
    contain live Streamlit widgets. min-height keeps all 4 level regardless of description
    length; accent color comes from the accent_rails mechanism like every other container. */
-.st-key-nav_0, .st-key-nav_1, .st-key-nav_2, .st-key-nav_3 {{ min-height: 168px; }}
+.st-key-nav_0, .st-key-nav_1, .st-key-nav_2, .st-key-nav_3 {{ min-height: 168px !important; }}
 
 /* ---- stat blocks (custom, mono numerals) ---- */
 .rc-stat-value {{
@@ -215,13 +215,13 @@ div[data-testid="stMarkdownContainer"] {{
 
 /* Overview page: store/family badge lists sit side by side and can wrap to different
    line counts (10 stores vs 6 longer family names) - fixed min-height keeps them level. */
-.st-key-selected_stores, .st-key-selected_families {{ min-height: 120px; }}
+.st-key-selected_stores, .st-key-selected_families {{ min-height: 120px !important; }}
 
 /* AI Report page: the MASE chart box and the two anomaly-method chart boxes sit side by
    side but naturally differ in height (3 rows vs 2, plus one has an x-axis title the
    others don't) - fixed height forces all three to match instead of the shorter ones
    trailing off mid-row. */
-.st-key-model_compare_ai, .st-key-anomaly_chart_0, .st-key-anomaly_chart_1 {{ height: 215px; }}
+.st-key-model_compare_ai, .st-key-anomaly_chart_0, .st-key-anomaly_chart_1 {{ height: 215px !important; }}
 </style>
 """
 
