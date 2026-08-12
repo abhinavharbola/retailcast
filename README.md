@@ -1,9 +1,17 @@
 # RetailCast: Forecasting and Anomaly Insights
 
-Retail demand forecasting, anomaly detection, and a self-verifying GenAI narrative layer,
-built on the [Favorita Store Sales](https://www.kaggle.com/competitions/store-sales-time-series-forecasting)
-dataset. 10 stores x 6 product families, 60 series, benchmarked across Prophet, SARIMA,
-LightGBM, and XGBoost with expanding-window walk-forward cross-validation.
+A retail demand forecasting and anomaly detection pipeline that benchmarks four models
+against each other and hands the results to an LLM to write up, then makes the LLM prove
+its own numbers before you ever see them, every claim it writes is checked against the
+same source data it was given, not taken on faith.
+
+Built on the [Favorita Store Sales](https://www.kaggle.com/competitions/store-sales-time-series-forecasting)
+dataset (10 stores x 6 product families, 60 series), benchmarked across Prophet, SARIMA,
+LightGBM, and XGBoost with expanding-window walk-forward cross-validation. Runs on
+free-tier infrastructure throughout: Kaggle's free notebooks for all training compute (no
+GPU needed, none of these models require one), Supabase's free Postgres tier for storage,
+and free-tier NIM/Groq/Gemini API access for the narrative layer, with automatic fallback
+across all three so a single provider's rate limit doesn't stall the report.
 
 The project is split into two stages: heavy compute (EDA, feature engineering, model
 training, anomaly detection) runs on Kaggle notebooks; a lightweight Streamlit dashboard
@@ -12,6 +20,17 @@ report and checks its own numeric claims against the source data before showing 
 Every generated report is saved to Supabase automatically and can also be downloaded
 directly from the dashboard as a Markdown file, both for the report you just generated and
 for any past report in history.
+
+## Preview
+
+<p align="center">
+  <img src="docs/screenshots/ui-home.png" width="720" alt="RetailCast Streamlit dashboard home page showing four stat blocks (60 series, 4 models, 2 anomaly detection methods, 15-day holdout) and four color-coded navigation cards for Overview, Forecast Explorer, Anomaly View, and AI Report">
+  <br>
+  <sub><em>Home page: dataset scope at a glance, and the four views the dashboard is split
+  into. Card color is a legend used throughout the app, gray for dataset/config, teal for
+  forecast results, amber for anomaly results, violet for AI-generated content, so you can
+  always tell what kind of content you're looking at without reading a label.</em></sub>
+</p>
 
 ## Architecture
 
@@ -61,7 +80,7 @@ structurally capped by its fixed contamination rate, independent of the true ano
 
 **Illustrative cost-of-error framing (holdout, USD):** XGBoost ~$193,153 vs. LightGBM
 ~$206,145 in estimated cost of forecast error, using published grocery-retail margin
-benchmarks, not verified P&L data (see Limitations). Saved to `cost_of_error.json` by
+benchmarks, not verified P&L data (see Known limitations). Saved to `cost_of_error.json` by
 notebook 4 and surfaced in the AI Report's facts, like every other number here.
 
 ## Tech stack
@@ -137,6 +156,9 @@ retailcast/
 ├── configs/
 │   └── config.yaml                       # selected stores/families, horizon, CV folds, cost-per-unit, thresholds
 │
+├── docs/
+│   └── screenshots/                      # referenced in the Preview section above
+│
 ├── tests/
 │
 ├── .env.example                          # NIM/Groq/Gemini API keys, Supabase URL + key, DagsHub token + URL
@@ -146,7 +168,7 @@ retailcast/
 └── README.md                             # architecture diagram, setup instructions, results summary
 ```
 
-## Setup
+## Getting started
 
 ### 1. Kaggle phase
 
@@ -209,14 +231,32 @@ create table anomaly_flags (
 );
 ```
 
-### 5. Verify and run
+## Running it
 
 ```bash
-pytest tests/ -v
 streamlit run dashboard/app.py
 ```
 
-## Limitations
+The dashboard opens on the home page shown above. From there: **Overview** for dataset
+scope and demand-pattern classification, **Forecast Explorer** for the model comparison
+and per-store/family forecast vs. actual, **Anomaly View** for control-limit vs. Isolation
+Forest flags, and **AI Report** to generate the narrative brief, watch its grounding ratio,
+and download it as Markdown. Every chart and number on every page is read directly from
+`kaggle_outputs/`, nothing in the dashboard is computed ad hoc from a different source
+than what the notebooks produced.
+
+## Testing
+
+```bash
+pytest tests/ -v
+```
+
+Covers `MAPE`/`WAPE`/`MASE` correctness (`tests/test_metrics.py`), the numeric claim
+extraction/tolerance logic behind the grounding check (`tests/test_grounding_check.py`),
+and that `configs/config.yaml` hasn't silently drifted from the constants hardcoded in the
+Kaggle notebooks (`tests/test_config_consistency.py`).
+
+## Known limitations
 
 - **Backtesting, not live forecasting.** Every model is evaluated on a 15-day holdout
   window that already has known actuals. There's no production path that generates
@@ -234,14 +274,5 @@ streamlit run dashboard/app.py
 - **`configs/config.yaml` doesn't drive the Kaggle notebooks.** They run in a separate
   environment and hardcode the same values independently (horizon, folds, control-limit
   k, contamination rate, cost-per-unit). `tests/test_config_consistency.py` checks the two
-  haven't drifted apart, but it's a manual mirror, not a shared source of truth - update
+  haven't drifted apart, but it's a manual mirror, not a shared source of truth, update
   both together if you change a modeling parameter.
-
-## Testing
-
-```bash
-pytest tests/ -v
-```
-
-Covers `MAPE`/`WAPE`/`MASE` correctness (`tests/test_metrics.py`) and the numeric claim
-extraction/tolerance logic behind the grounding check (`tests/test_grounding_check.py`).
