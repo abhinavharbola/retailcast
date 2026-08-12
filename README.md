@@ -18,19 +18,21 @@ Additional screenshots (`homepage.png`, `dataset_overview.png`, `anomaly_view.pn
 ## Architecture
 
 ```mermaid
-flowchart LR
-    subgraph Kaggle["Kaggle (notebooks, GPU-free)"]
-        A["01_eda.py<br/>subsetting, activation diagnostics, STL"] --> B["02_feature_engineering.py<br/>lag/rolling features, demand-pattern classification"]
+flowchart TB
+    subgraph Kaggle["Kaggle"]
+        A["01_eda.py<br/>Exploration & Diagnostics"] --> B["02_feature_engineering.py<br/>Lag & Rolling Features"]
         B --> C["03_statistical_models.py<br/>Prophet + SARIMA"]
-        B --> D["04_ml_models.py<br/>LightGBM + XGBoost, walk-forward CV"]
-        D --> E["05_anomaly_detection.py<br/>control limits + Isolation Forest"]
+        B --> D["04_ml_models.py<br/>LightGBM + XGBoost"]
+        D --> E["05_anomaly_detection.py<br/>Control Limits + Isolation Forest"]
     end
-    E -->|download from Output tab| F[("kaggle_outputs/")]
+
+    E -->|"outputs"| F[("kaggle_outputs/")]
+
     subgraph Local["Local"]
-        F --> G["Streamlit dashboard"]
-        G --> H[("Supabase<br/>reports, forecast_runs, anomaly_flags")]
-        G --> I["LLM provider<br/>NIM -> Groq -> Gemini fallback"]
-        D -. training metrics .-> J[("DagsHub / MLflow")]
+        F --> G["Streamlit Dashboard"]
+        G --> H[("Supabase<br/>Reports & Flags")]
+        G --> I["LLM Provider<br/>NIM → Groq → Gemini"]
+        D -.->|"metrics"| J[("DagsHub / MLflow")]
     end
 ```
 
