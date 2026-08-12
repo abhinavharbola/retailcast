@@ -1,4 +1,4 @@
-# RetailCast: Forecasting and Anomaly Insights
+# RetailCast: Forecasting and Anomaly Bench
 
 A retail demand forecasting and anomaly detection pipeline that benchmarks Prophet, SARIMA, LightGBM, and XGBoost across 60 retail series using expanding-window walk-forward cross-validation. It uses Kaggle’s free notebooks for training, Supabase’s free Postgres tier for storage, and free-tier NIM/Groq/Gemini APIs for automated reporting with provider fallback.
 
@@ -70,7 +70,7 @@ Control limits catch more true anomalies (higher recall) at the cost of more fal
 ## Project structure
 
 ```
-retailcast-forecast-and-anomaly-detection/
+retail-forecast-and-anomaly-bench/
 ├── kaggle/                               # Everything that runs on Kaggle, not locally
 │   ├── kaggle_setup.md                   # env setup, secrets, run order
 │   ├── requirements-ipynb.txt            # single source of truth, installed via !pip install on Kaggle
