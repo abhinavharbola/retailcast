@@ -8,10 +8,12 @@ The project separates heavy computation from a lightweight local Streamlit dashb
 ## Preview
 
 <p align="center">
-  <img src="assets/ui.png" width="720" alt="Anomaly Detection">
+  <img src="assets/ui.png" width="720" alt="Anomaly Detection view of the project with graphs and tables that can be saved to supabase db on a button-click">
   <br>
-  <sub><em>Anomaly Detection</em></sub>
+  <sub><em>Anomaly Detection view (Synthetic-Injection evaluation)</em></sub>
 </p>
+
+Additional screenshots (`homepage.png`, `dataset_overview.png`, `anomaly_view.png`, `forecast.png`, `ai_report.png`) are in [`assets/`](assets/) using that naming convention, one per dashboard view.
 
 ## Architecture
 
