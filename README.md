@@ -70,7 +70,7 @@ Control limits catch more true anomalies (higher recall) at the cost of more fal
 ## Project structure
 
 ```
-retail-forecast-and-anomaly-bench/
+retailcast-project/
 ├── kaggle/                               # Everything that runs on Kaggle, not locally
 │   ├── kaggle_setup.md                   # env setup, secrets, run order
 │   ├── requirements-ipynb.txt            # single source of truth, installed via !pip install on Kaggle
