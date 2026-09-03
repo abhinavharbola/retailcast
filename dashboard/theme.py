@@ -328,6 +328,7 @@ def altair_theme(chart):
         .configure_axis(
             labelFont="JetBrains Mono",
             labelFontSize=10.5,
+            labelLimit=0,
             labelColor=TOKENS["text_muted"],
             titleFont="Inter",
             titleFontSize=11,

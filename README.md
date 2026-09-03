@@ -92,7 +92,7 @@ retailcast-project/
 │   ├── storage/
 │   │   └── supabase_client.py            # save/fetch forecast runs, reports, anomaly flags
 │   ├── tracking/
-│   │   └── mlflow_utils.py               # (optional) query past DagsHub/MLflow runs for the dashboard
+│   │   └── mlflow_utils.py               # queries past DagsHub/MLflow runs, surfaced in forecast_explorer.py
 │   └── utils/
 │       ├── config.py                     # loads configs/config.yaml, env vars
 │       └── metrics.py                    # MAPE/WAPE/MASE - single source, used by dashboard + tests
@@ -103,7 +103,7 @@ retailcast-project/
 │   └── views/
 │       ├── home.py                       # landing page, nav cards to each view
 │       ├── overview.py                   # dataset scope, demand pattern classification, stationarity
-│       ├── forecast_explorer.py          # model comparison, per store/family forecast vs actual
+│       ├── forecast_explorer.py          # model comparison, per store/family forecast vs actual, MLflow run history
 │       ├── anomaly_view.py               # flagged anomalies, control-limit vs IsoForest comparison
 │       └── ai_report.py                  # GenAI narrative, key-metric charts, grounding-check status
 │
@@ -138,7 +138,7 @@ pip install pytest
 cp .env.example .env
 ```
 
-Fill in at least one LLM provider key (`NIM_API_KEY` / `GROQ_API_KEY` / `GEMINI_API_KEY`) and your Supabase **secret** key (this runs server-side, not in a browser).
+Fill in at least one LLM provider key (`NIM_API_KEY` / `GROQ_API_KEY` / `GEMINI_API_KEY`) and your Supabase **secret** key (this runs server-side, not in a browser). `DAGSHUB_TOKEN` / `DAGSHUB_REPO` are optional - without them the dashboard works normally, just without the "Experiment history" section on Forecast Explorer.
 
 ### 4. Supabase tables
 
@@ -192,7 +192,7 @@ Every chart and number on every page is read directly from `kaggle_outputs/`, no
 pytest tests/ -v
 ```
 
-Covers `MAPE`/`WAPE`/`MASE` correctness (`tests/test_metrics.py`), the numeric claim extraction/tolerance logic behind the grounding check (`tests/test_grounding_check.py`).
+16 tests across 3 files: `MAPE`/`WAPE`/`MASE` correctness (`tests/test_metrics.py`), the numeric claim extraction/tolerance logic behind the grounding check (`tests/test_grounding_check.py`), and config/notebook-constant drift (`tests/test_config_consistency.py`).
 
 ## Known limitations
 

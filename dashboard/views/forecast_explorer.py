@@ -5,10 +5,12 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.theme import TOKENS, altair_theme, inject, page_header
-from src.storage.supabase_client import save_forecast_run
+from src.storage.supabase_client import fetch_forecast_runs, save_forecast_run
+from src.tracking.mlflow_utils import fetch_recent_runs
 from src.utils.config import CONFIG
 
-inject(accent_rails={"model_compare": "forecast", "series_chart": "forecast"})
+inject(accent_rails={"model_compare": "forecast", "series_chart": "forecast",
+                      "experiment_history": "forecast"})
 
 page_header(
     eyebrow="Model benchmark - holdout window",
@@ -79,9 +81,11 @@ with st.container(border=True, key="model_compare"):
     # so the bar's length became the SUM of both models' MASE instead of showing either
     # one - and it's more useful this way anyway: it shows LightGBM vs XGBoost separately
     # instead of hiding one behind the other.
-    chart_df["label"] = chart_df.apply(
-        lambda r: r["model"] if r["source"] == "ML (global)" else r["source"], axis=1
-    )
+    # Label is always the bare model name now (was a long "Prophet (60-series avg)" /
+    # "SARIMA (3-series avg)" string for those two rows, which got clipped by Vega-Lite's
+    # axis label width limit) - the averaging caveat still shows up via the tooltip's
+    # "source" field instead.
+    chart_df["label"] = chart_df["model"]
     chart_df["is_best"] = chart_df["model"] == best_row["model"]
 
     bars = (
@@ -129,6 +133,36 @@ with st.container(border=True, key="model_compare"):
         else:
             st.success(f"Logged {logged} rows to Supabase.")
 
+    with st.expander("Past logged comparisons"):
+        try:
+            past_runs = fetch_forecast_runs()
+        except Exception as e:
+            past_runs = None
+            st.caption(f"Could not load past comparisons: {e}")
+        if past_runs:
+            st.dataframe(pd.DataFrame(past_runs), width='stretch', hide_index=True)
+        elif past_runs is not None:
+            st.caption("No comparisons logged yet.")
+
+st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Experiment history</div>'
+            .format(TOKENS["forecast"]), unsafe_allow_html=True)
+st.caption("Past ML training runs tracked via MLflow on DagsHub, separate from the "
+           "holdout comparison above (this pulls raw run metrics/params, not just the "
+           "final holdout scores).")
+with st.container(border=True, key="experiment_history"):
+    try:
+        recent_runs = fetch_recent_runs()
+    except Exception as e:
+        recent_runs = None
+        st.caption(f"Could not load MLflow run history: {e}")
+    if recent_runs:
+        # metrics/params come back as nested dicts per run; flatten so each ends up
+        # as its own column instead of rendering as an unreadable dict blob.
+        st.dataframe(pd.json_normalize(recent_runs), width='stretch', hide_index=True)
+    elif recent_runs is not None:
+        st.caption("No MLflow run history available. Set DAGSHUB_TOKEN and DAGSHUB_REPO "
+                   "in .env to enable this (optional - everything else works without it).")
+
 st.divider()
 st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Store-family forecast vs. actual</div>'
             .format(TOKENS["forecast"]), unsafe_allow_html=True)
@@ -148,7 +182,10 @@ with st.container(border=True, key="series_chart"):
             alt.Chart(melted)
             .mark_line(point=True, strokeWidth=2)
             .encode(
-                x=alt.X("date:T", title=None),
+                # Explicit format: Vega-Lite's default temporal axis mixes tick
+                # granularities (month name on the first tick of a month, weekday+day
+                # elsewhere), which reads as inconsistent over a short 15-day window.
+                x=alt.X("date:T", title=None, axis=alt.Axis(format="%b %d")),
                 y=alt.Y("units:Q", title="units"),
                 color=alt.Color(
                     "series:N",

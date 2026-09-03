@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.theme import TOKENS, altair_theme, inject, page_header
-from src.storage.supabase_client import save_anomaly_flags
+from src.storage.supabase_client import fetch_anomaly_flags, save_anomaly_flags
 from src.utils.config import CONFIG
 
 inject(accent_rails={"eval_chart_0": "anomaly", "eval_chart_1": "anomaly", "flagged_table": "anomaly"})
@@ -108,15 +108,19 @@ with st.container(border=True, key="flagged_table"):
     display_cols = ["date", "store_nbr", "family", "sales", "forecast", "residual",
                      "control_limit_flag", "isoforest_flag"]
     flagged_display = flagged[display_cols].sort_values("date")
+    # Table shows a clean date (no "00:00:00" time component); the datetime dtype is
+    # kept in flagged_display itself for the Supabase-logging step below.
+    table_view = flagged_display.copy()
+    table_view["date"] = table_view["date"].dt.strftime("%Y-%m-%d")
 
     if method == "either":
         def _co_detect_style(row):
             agree = row["control_limit_flag"] == 1 and row["isoforest_flag"] == 1
             style = f"background-color: {TOKENS['anomaly']}22" if agree else ""
             return [style] * len(row)
-        st.dataframe(flagged_display.style.apply(_co_detect_style, axis=1), width='stretch')
+        st.dataframe(table_view.style.apply(_co_detect_style, axis=1), width='stretch')
     else:
-        st.dataframe(flagged_display, width='stretch')
+        st.dataframe(table_view, width='stretch')
 
     if st.button("Log flagged anomalies to Supabase"):
         to_log = flagged_display.copy()
@@ -126,3 +130,14 @@ with st.container(border=True, key="flagged_table"):
             st.success(f"Logged {len(to_log)} rows to Supabase.")
         except Exception as e:
             st.error(f"Logging failed: {e}")
+
+    with st.expander("Past logged flags"):
+        try:
+            past_flags = fetch_anomaly_flags()
+        except Exception as e:
+            past_flags = None
+            st.caption(f"Could not load past flags: {e}")
+        if past_flags:
+            st.dataframe(pd.DataFrame(past_flags), width='stretch', hide_index=True)
+        elif past_flags is not None:
+            st.caption("No anomaly flags logged yet.")
