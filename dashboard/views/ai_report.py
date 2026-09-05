@@ -67,25 +67,23 @@ def render_model_mase_chart(facts):
         .mark_bar(cornerRadiusEnd=2)
         .encode(
             y=alt.Y("model:N", sort="-x", title=None),
-            # No x-axis title text: the caption above the chart already says "lower is
-            # better", and the three side-by-side chart boxes need identical internal
-            # content (no title text here, none in the other two) so they come out the
-            # same height naturally, rather than depending on a CSS override to force it.
             x=alt.X("mase:Q", title=None),
             color=alt.condition(alt.datum.is_best, alt.value(TOKENS["forecast"]), alt.value(TOKENS["neutral"])),
             tooltip=["model", alt.Tooltip("mase:Q", format=".3f")],
         )
-        .properties(height=CHART_BOX_HEIGHT)
+        # Title lives inside the Vega-Lite spec (not an st.caption above the container)
+        # so its height is identical across all three "Key metrics" boxes by construction:
+        # Vega-Lite reserves the same fixed title band for any single-line title regardless
+        # of its text, whereas stacking a variable number of st.caption lines above each
+        # container (as this used to do) pushed some boxes' tops lower than others.
+        .properties(height=CHART_BOX_HEIGHT, title="MASE by model")
     )
     return altair_theme(chart)
 
 
-def render_anomaly_method_chart(precision, recall):
+def render_anomaly_method_chart(precision, recall, title):
     # One chart per method (no yOffset grouping) - every bar gets its own row so axis
-    # labels can't collide, regardless of how narrow the column gets. The method label is
-    # an st.caption ABOVE the container (see call site), not inside it - matches the MASE
-    # chart's container, which also holds nothing but the chart itself. Identical internal
-    # content across all three side-by-side boxes is what makes them equal height.
+    # labels can't collide, regardless of how narrow the column gets.
     df = pd.DataFrame({"metric": ["precision", "recall"], "score": [precision, recall]})
     chart = (
         alt.Chart(df)
@@ -101,7 +99,7 @@ def render_anomaly_method_chart(precision, recall):
             ),
             tooltip=["metric", alt.Tooltip("score:Q", format=".2f")],
         )
-        .properties(height=CHART_BOX_HEIGHT)
+        .properties(height=CHART_BOX_HEIGHT, title=title)
     )
     return altair_theme(chart)
 
@@ -141,17 +139,19 @@ if st.button("Generate new report", type="primary"):
         st.caption("Anomaly detection: precision vs recall")
         sub1, sub2 = st.columns(2)
         with sub1:
-            st.caption("Control limits")
             with st.container(border=True, key="anomaly_chart_0"):
                 st.altair_chart(
-                    render_anomaly_method_chart(facts["control_limit_precision"], facts["control_limit_recall"]),
+                    render_anomaly_method_chart(
+                        facts["control_limit_precision"], facts["control_limit_recall"], "Control limits",
+                    ),
                     width='stretch',
                 )
         with sub2:
-            st.caption("Isolation Forest")
             with st.container(border=True, key="anomaly_chart_1"):
                 st.altair_chart(
-                    render_anomaly_method_chart(facts["isoforest_precision"], facts["isoforest_recall"]),
+                    render_anomaly_method_chart(
+                        facts["isoforest_precision"], facts["isoforest_recall"], "Isolation Forest",
+                    ),
                     width='stretch',
                 )
 
