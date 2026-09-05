@@ -5,7 +5,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from dashboard.theme import TOKENS, altair_theme, badge, grounding_pill, inject, page_header
+from dashboard.theme import TOKENS, altair_theme, badge, grounding_bar, grounding_pill, inject, page_header
 from src.llm.grounding_check import check_grounding
 from src.llm.narrative import generate_narrative
 from src.storage.supabase_client import fetch_reports, save_report
@@ -116,8 +116,6 @@ if st.button("Generate new report", type="primary"):
     facts = result["facts"]
     generated_at = datetime.now(timezone.utc).isoformat()
 
-    st.success(f"Generated using: {result['provider']}")
-
     fallback_happened = any(a["provider"] != result["provider"] for a in result["attempts"])
     with st.container(border=True, key="fallback_log"):
         with st.expander("Provider fallback log", expanded=fallback_happened):
@@ -165,13 +163,7 @@ if st.button("Generate new report", type="primary"):
         )
 
     st.markdown("<div style='height:0.9rem'></div>", unsafe_allow_html=True)
-    st.markdown(grounding_pill(grounding["grounded_ratio"]), unsafe_allow_html=True)
-    st.caption(
-        "Regex-based numeric check, not full claim verification. It can miss "
-        "paraphrased claims with no literal number, and can flag numbers that are "
-        "correct but simply aren't in the source facts. Treat a low ratio as "
-        "'needs review,' not 'definitely wrong.'"
-    )
+    st.markdown(grounding_bar(grounding["grounded_ratio"]), unsafe_allow_html=True)
 
     st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Narrative</div>'
                 .format(TOKENS["ai"]), unsafe_allow_html=True)

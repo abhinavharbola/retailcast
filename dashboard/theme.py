@@ -9,7 +9,7 @@ the same thing everywhere in the app:
     gray   -> dataset / configuration (ground truth about what was run)
     teal   -> forecast results (model output, backtested)
     amber  -> anomaly detection results (flags, control limits)
-    violet -> AI-generated narrative (the one thing in the app that isn't a direct
+    indigo -> AI-generated narrative (the one thing in the app that isn't a direct
               computation - it's the LLM's interpretation, verified but still generated)
 
 Import `inject()` once per page (cheap, idempotent) and use the helpers below instead of
@@ -187,6 +187,27 @@ hr {{
 .rc-pill--bad  {{ background: rgba(193,73,63,0.10);   color: {TOKENS["bad"]}; border-color: rgba(193,73,63,0.4); }}
 .rc-pill-dot {{ width: 7px; height: 7px; border-radius: 50%; background: currentColor; }}
 
+/* ---- grounding bar: the pct/label pill and its caveat text as one row ---- */
+.rc-grounding-bar {{
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.6rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 4px;
+    border: 1px solid;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}}
+.rc-grounding-bar strong {{
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    white-space: nowrap;
+}}
+
 /* ---- native Streamlit widgets, restyled to match ---- */
 [data-testid="stMetricValue"] {{
     font-family: 'IBM Plex Mono', monospace !important;
@@ -223,6 +244,11 @@ div[data-testid="stMarkdownContainer"] {{
    a chart at the same height, no title text inside any of them, so they're equal by
    construction) - this is just a safety-net floor, not the mechanism doing the real work. */
 .st-key-model_compare_ai, .st-key-anomaly_chart_0, .st-key-anomaly_chart_1 {{ min-height: 165px !important; }}
+
+/* Justify only the narrative's body paragraphs (Word-style ragged-right becomes flush) -
+   headings, list items, and the metric tables inside the same card are untouched since
+   this targets <p> specifically, not the container as a whole. */
+.st-key-narrative_card p {{ text-align: justify; text-justify: inter-word; }}
 </style>
 """
 
@@ -316,6 +342,29 @@ def grounding_pill(ratio: float) -> str:
     return (
         f'<span class="rc-pill rc-pill--{kind}">'
         f'<span class="rc-pill-dot"></span>{pct:.0f}% {label}</span>'
+    )
+
+
+def grounding_bar(ratio: float) -> str:
+    """Same status as grounding_pill, but as one bar with the caveat text folded in,
+    instead of a standalone pill with a separate caption line underneath it."""
+    pct = ratio * 100
+    if pct >= 90:
+        kind, label = "good", "grounded"
+    elif pct >= 70:
+        kind, label = "warn", "partially grounded"
+    else:
+        kind, label = "bad", "low grounding"
+    caveat = (
+        "Regex-based numeric check, not full claim verification. It can miss paraphrased "
+        "claims with no literal number, and can flag numbers that are correct but simply "
+        "aren't in the source facts. Treat a low ratio as 'needs review,' not 'definitely wrong.'"
+    )
+    return (
+        f'<div class="rc-grounding-bar rc-pill--{kind}">'
+        f'<strong><span class="rc-pill-dot"></span>{pct:.0f}% {label}</strong>'
+        f'<span style="color:{TOKENS["text_muted"]}">{caveat}</span>'
+        f'</div>'
     )
 
 
