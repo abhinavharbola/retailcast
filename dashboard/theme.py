@@ -26,9 +26,9 @@ TOKENS = {
     "text": "#2B2A26",
     "text_muted": "#6E6A61",
     "text_faint": "#9C978C",
-    "forecast": "#1E8A76",
-    "anomaly": "#B27A0E",
-    "ai": "#6355C2",
+    "forecast": "#2F6D5E",
+    "anomaly": "#A8571F",
+    "ai": "#3C4770",
     "good": "#2E9457",
     "bad": "#C1493F",
     "neutral": "#8C8779",
@@ -41,10 +41,10 @@ TOKENS = {
 
 _CSS = f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 html, body, [class*="css"] {{
-    font-family: 'Inter', sans-serif;
+    font-family: 'Public Sans', sans-serif;
 }}
 
 /* ---- page chrome ---- */
@@ -63,7 +63,7 @@ hr {{
 
 /* ---- headers ---- */
 .rc-eyebrow {{
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.72rem;
     font-weight: 500;
     letter-spacing: 0.14em;
@@ -78,7 +78,7 @@ hr {{
     text-align: center;
 }}
 .rc-h1 {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Fraunces', serif;
     font-weight: 700;
     font-size: 2.1rem;
     line-height: 1.15;
@@ -87,7 +87,7 @@ hr {{
     text-align: center;
 }}
 .rc-sub {{
-    font-family: 'Inter', sans-serif;
+    font-family: 'Public Sans', sans-serif;
     font-size: 0.98rem;
     color: {TOKENS["text_muted"]};
     width: 100%;
@@ -111,14 +111,14 @@ hr {{
 .rc-card--neutral  {{ border-left-color: {TOKENS["neutral"]}; }}
 
 .rc-card-title {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Fraunces', serif;
     font-weight: 600;
     font-size: 1.02rem;
     color: {TOKENS["text"]};
     margin-bottom: 0.2rem;
 }}
 .rc-card-body {{
-    font-family: 'Inter', sans-serif;
+    font-family: 'Public Sans', sans-serif;
     font-size: 0.9rem;
     color: {TOKENS["text_muted"]};
     line-height: 1.5;
@@ -136,14 +136,14 @@ hr {{
 
 /* ---- stat blocks (custom, mono numerals) ---- */
 .rc-stat-value {{
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-weight: 600;
     font-size: 1.9rem;
     color: {TOKENS["text"]};
     line-height: 1.1;
 }}
 .rc-stat-label {{
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -154,7 +154,7 @@ hr {{
 /* ---- badges / chips ---- */
 .rc-badge {{
     display: inline-block;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.74rem;
     font-weight: 500;
     padding: 0.14rem 0.55rem;
@@ -164,9 +164,9 @@ hr {{
     white-space: nowrap;
 }}
 .rc-badge--neutral  {{ background: rgba(140,135,121,0.16); color: {TOKENS["text_muted"]}; border-color: {TOKENS["border"]}; }}
-.rc-badge--forecast {{ background: rgba(30,138,118,0.12);  color: {TOKENS["forecast"]}; border-color: rgba(30,138,118,0.35); }}
-.rc-badge--anomaly  {{ background: rgba(178,122,14,0.12);  color: {TOKENS["anomaly"]}; border-color: rgba(178,122,14,0.35); }}
-.rc-badge--ai       {{ background: rgba(99,85,194,0.12);   color: {TOKENS["ai"]}; border-color: rgba(99,85,194,0.35); }}
+.rc-badge--forecast {{ background: rgba(47,109,94,0.12);  color: {TOKENS["forecast"]}; border-color: rgba(47,109,94,0.35); }}
+.rc-badge--anomaly  {{ background: rgba(168,87,31,0.12);  color: {TOKENS["anomaly"]}; border-color: rgba(168,87,31,0.35); }}
+.rc-badge--ai       {{ background: rgba(60,71,112,0.12);   color: {TOKENS["ai"]}; border-color: rgba(60,71,112,0.35); }}
 .rc-badge--good     {{ background: rgba(46,148,87,0.12);   color: {TOKENS["good"]}; border-color: rgba(46,148,87,0.35); }}
 .rc-badge--bad      {{ background: rgba(193,73,63,0.12);   color: {TOKENS["bad"]}; border-color: rgba(193,73,63,0.35); }}
 
@@ -175,7 +175,7 @@ hr {{
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-weight: 600;
     font-size: 0.95rem;
     padding: 0.4rem 0.85rem;
@@ -183,17 +183,17 @@ hr {{
     border: 1px solid;
 }}
 .rc-pill--good {{ background: rgba(46,148,87,0.10);  color: {TOKENS["good"]}; border-color: rgba(46,148,87,0.4); }}
-.rc-pill--warn {{ background: rgba(178,122,14,0.10);  color: {TOKENS["anomaly"]}; border-color: rgba(178,122,14,0.4); }}
+.rc-pill--warn {{ background: rgba(168,87,31,0.10);  color: {TOKENS["anomaly"]}; border-color: rgba(168,87,31,0.4); }}
 .rc-pill--bad  {{ background: rgba(193,73,63,0.10);   color: {TOKENS["bad"]}; border-color: rgba(193,73,63,0.4); }}
 .rc-pill-dot {{ width: 7px; height: 7px; border-radius: 50%; background: currentColor; }}
 
 /* ---- native Streamlit widgets, restyled to match ---- */
 [data-testid="stMetricValue"] {{
-    font-family: 'JetBrains Mono', monospace !important;
+    font-family: 'IBM Plex Mono', monospace !important;
     font-weight: 600 !important;
 }}
 [data-testid="stMetricLabel"] {{
-    font-family: 'JetBrains Mono', monospace !important;
+    font-family: 'IBM Plex Mono', monospace !important;
     font-size: 0.72rem !important;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -326,11 +326,11 @@ def altair_theme(chart):
         chart.properties(background=TOKENS["surface"])
         .configure_view(strokeWidth=0)
         .configure_axis(
-            labelFont="JetBrains Mono",
+            labelFont="IBM Plex Mono",
             labelFontSize=10.5,
             labelLimit=0,
             labelColor=TOKENS["text_muted"],
-            titleFont="Inter",
+            titleFont="Public Sans",
             titleFontSize=11,
             titleColor=TOKENS["text_muted"],
             grid=True,
@@ -339,10 +339,10 @@ def altair_theme(chart):
             tickColor=TOKENS["border"],
         )
         .configure_legend(
-            labelFont="Inter",
+            labelFont="Public Sans",
             labelFontSize=11,
             labelColor=TOKENS["text_muted"],
             titleColor=TOKENS["text_muted"],
         )
-        .configure_title(font="Space Grotesk", fontSize=13, color=TOKENS["text"])
+        .configure_title(font="Fraunces", fontSize=13, color=TOKENS["text"])
     )
