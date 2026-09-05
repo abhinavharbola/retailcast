@@ -12,7 +12,7 @@ from src.storage.supabase_client import fetch_reports, save_report
 from src.utils.config import CONFIG
 
 inject(accent_rails={
-    "narrative_card": "ai", "fallback_log": "ai", "model_compare_ai": "forecast",
+    "narrative_card": "ai", "model_compare_ai": "forecast",
     "anomaly_chart_0": "anomaly", "anomaly_chart_1": "anomaly",
 })
 
@@ -115,17 +115,7 @@ if st.button("Generate new report", type="primary"):
     grounding = check_grounding(result["text"], result["facts"])
     facts = result["facts"]
     generated_at = datetime.now(timezone.utc).isoformat()
-
     fallback_happened = any(a["provider"] != result["provider"] for a in result["attempts"])
-    with st.container(border=True, key="fallback_log"):
-        with st.expander("Provider fallback log", expanded=fallback_happened):
-            for a in result["attempts"]:
-                status_badge = badge("ok", "good") if a["success"] else badge("failed", "bad")
-                st.markdown(
-                    f'{status_badge} <strong>{a["provider"]}</strong> '
-                    f'<span style="color:{TOKENS["text_muted"]}">{a["error"] or "succeeded"}</span>',
-                    unsafe_allow_html=True,
-                )
 
     st.markdown('<div class="rc-eyebrow">Key metrics at a glance</div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
@@ -165,12 +155,17 @@ if st.button("Generate new report", type="primary"):
     st.markdown("<div style='height:0.9rem'></div>", unsafe_allow_html=True)
     st.markdown(grounding_bar(grounding["grounded_ratio"]), unsafe_allow_html=True)
 
-    st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Narrative</div>'
+    # Explicit equal-height spacers on both sides of the eyebrow (instead of relying on
+    # Streamlit's default inter-element gap above it plus the eyebrow's own smaller
+    # margin-bottom below it, which produced a bigger gap above "Narrative" than below it).
+    st.markdown("<div style='height:0.9rem'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}; margin-bottom:0">Narrative</div>'
                 .format(TOKENS["ai"]), unsafe_allow_html=True)
+    st.markdown("<div style='height:0.9rem'></div>", unsafe_allow_html=True)
     with st.container(border=True, key="narrative_card"):
         st.markdown(result["text"])
 
-    dl_col, claims_col, facts_col = st.columns(3)
+    dl_col, claims_col, facts_col, fallback_col = st.columns(4)
     with dl_col:
         st.download_button(
             "Download this report (.md)",
@@ -187,6 +182,15 @@ if st.button("Generate new report", type="primary"):
     with facts_col:
         with st.expander("Source facts used"):
             st.json(facts)
+    with fallback_col:
+        with st.expander("Provider fallback log", expanded=fallback_happened):
+            for a in result["attempts"]:
+                status_badge = badge("ok", "good") if a["success"] else badge("failed", "bad")
+                st.markdown(
+                    f'{status_badge} <strong>{a["provider"]}</strong> '
+                    f'<span style="color:{TOKENS["text_muted"]}">{a["error"] or "succeeded"}</span>',
+                    unsafe_allow_html=True,
+                )
 
     try:
         save_report(result["text"], facts, result["provider"], grounding["grounded_ratio"])
