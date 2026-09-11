@@ -8,3 +8,4 @@ pyyaml
 requests
 supabase
 mlflow
+pytest

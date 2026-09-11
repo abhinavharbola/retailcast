@@ -53,10 +53,10 @@ A single global tree model pooling across all 60 series beats per-series statist
 
 | Method | Precision | Recall | F1 |
 |---|---|---|---|
-| Control limits (k=2.5) | 0.581 | **0.86** | **0.694** |
-| Isolation Forest (5% contamination) | **0.667** | 0.60 | 0.632 |
+| Control limits (k=2.5) | 0.581 | **0.86** | 0.694 |
+| Isolation Forest (5% contamination) | **0.867** | 0.78 | **0.821** |
 
-Control limits catch more true anomalies (higher recall) at the cost of more false positives. Isolation Forest is stricter and misses more. Isolation Forest's recall is structurally capped by its fixed contamination rate, independent of the true anomaly rate.
+Isolation Forest now has both far fewer false positives and the higher F1, once its evaluation features are scaled from clean (pre-injection) statistics instead of stats computed on the injected data itself. Control limits still catches slightly more of the injected anomalies (higher recall), at the cost of a lot more false positives. Isolation Forest's recall is structurally capped by its fixed contamination rate, independent of the true anomaly rate.
 
 **Illustrative cost-of-error framing (holdout, USD):** XGBoost ~$193,153 vs. LightGBM ~$206,145 in estimated cost of forecast error, using published grocery-retail margin benchmarks, not verified P&L data (see Known limitations). Saved to `cost_of_error.json` by notebook 4 and surfaced in the AI Report's facts, like every other number here.
 
