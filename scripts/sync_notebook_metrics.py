@@ -4,11 +4,12 @@ src/utils/metrics.py, which is the canonical source.
 
 Why this exists: kaggle/notebooks/03_statistical_models.ipynb and
 kaggle/notebooks/04_ml_models.ipynb run in an isolated Kaggle environment and can't
-`import src.utils.metrics`, so they each carry their own copy of these three functions.
-Copy-pasted code drifts silently - this script is what prevents that, by treating
-src/utils/metrics.py as ground truth and mechanically overwriting the notebook copies
-with it, delimited by "# BEGIN SYNCED METRICS: <name>" / "# END SYNCED METRICS: <name>"
-markers that exist in all three files.
+`import src.utils.metrics`, so they each carry their own copy of these three functions,
+one per notebook cell. Copy-pasted code drifts silently - this script is what prevents
+that, by treating src/utils/metrics.py as ground truth and mechanically overwriting the
+matching notebook cell's source with it, delimited by "# BEGIN SYNCED METRICS: <name>" /
+"# END SYNCED METRICS: <name>" markers that exist in all three files (each pair lives
+entirely inside one cell in the notebooks).
 
 Usage:
     python scripts/sync_notebook_metrics.py            # rewrite the notebooks in place
@@ -24,6 +25,8 @@ import re
 import sys
 from pathlib import Path
 
+from _notebook_utils import cell_source, read_notebook, set_cell_source, write_notebook
+
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_OF_TRUTH = ROOT / "src" / "utils" / "metrics.py"
 NOTEBOOK_TARGETS = [
@@ -32,50 +35,65 @@ NOTEBOOK_TARGETS = [
 ]
 
 MARKER_RE = re.compile(
-    r"# BEGIN SYNCED METRICS: (\w+)\n.*?# END SYNCED METRICS: \1\n",
+    r"# BEGIN SYNCED METRICS: (\w+)\n.*?# END SYNCED METRICS: \1\n?",
     re.DOTALL,
 )
 
 
 def extract_blocks(text):
-    """Returns {name: full_block_text_including_markers} for a file's content."""
+    """Returns {name: full_block_text_including_markers} found in a text blob."""
     return {m.group(1): m.group(0) for m in MARKER_RE.finditer(text)}
 
 
-def sync_file(target_path, canonical_blocks, check_only):
-    original = target_path.read_text()
-    target_blocks = extract_blocks(original)
+def sync_notebook(nb_path, canonical_blocks, check_only):
+    nb = read_notebook(nb_path)
+    changed_names = []
+    diffs = []
 
-    missing = set(canonical_blocks) - set(target_blocks)
+    for cell in nb["cells"]:
+        if cell["cell_type"] != "code":
+            continue
+        original_src = cell_source(cell)
+        cell_blocks = extract_blocks(original_src)
+        if not cell_blocks:
+            continue
+
+        updated_src = original_src
+        for name, cell_block in cell_blocks.items():
+            if name not in canonical_blocks:
+                continue
+            canonical_block = canonical_blocks[name]
+            if canonical_block.rstrip("\n") != cell_block.rstrip("\n"):
+                changed_names.append(name)
+                updated_src = updated_src.replace(cell_block, canonical_block)
+
+        if updated_src != original_src:
+            diffs.append("\n".join(difflib.unified_diff(
+                original_src.splitlines(), updated_src.splitlines(),
+                fromfile=f"{nb_path}::cell", tofile=f"{nb_path}::cell (synced)", lineterm="",
+            )))
+            if not check_only:
+                set_cell_source(cell, updated_src)
+
+    all_canonical_names = set(canonical_blocks)
+    found_names = set()
+    for cell in nb["cells"]:
+        if cell["cell_type"] == "code":
+            found_names |= set(extract_blocks(cell_source(cell)))
+    missing = all_canonical_names - found_names
     if missing:
         raise SystemExit(
-            f"{target_path}: missing SYNCED METRICS marker(s) for {sorted(missing)}. "
+            f"{nb_path}: missing SYNCED METRICS marker(s) for {sorted(missing)}. "
             "Add matching '# BEGIN/END SYNCED METRICS: <name>' markers before syncing."
         )
 
-    updated = original
-    changed_names = []
-    for name, target_block in target_blocks.items():
-        canonical_block = canonical_blocks[name]
-        if canonical_block != target_block:
-            changed_names.append(name)
-            updated = updated.replace(target_block, canonical_block)
+    if changed_names and check_only:
+        print(f"DRIFT in {nb_path} for: {', '.join(sorted(set(changed_names)))}\n" + "\n".join(diffs) + "\n")
+    elif changed_names:
+        write_notebook(nb_path, nb)
+        print(f"Synced {nb_path}: {', '.join(sorted(set(changed_names)))}")
 
-    if not changed_names:
-        return False
-
-    if check_only:
-        diff = "\n".join(difflib.unified_diff(
-            original.splitlines(), updated.splitlines(),
-            fromfile=str(target_path), tofile=str(target_path) + " (synced)",
-            lineterm="",
-        ))
-        print(f"DRIFT in {target_path} for: {', '.join(changed_names)}\n{diff}\n")
-    else:
-        target_path.write_text(updated)
-        print(f"Synced {target_path}: {', '.join(changed_names)}")
-
-    return True
+    return bool(changed_names)
 
 
 def main():
@@ -90,7 +108,7 @@ def main():
 
     any_drift = False
     for target in NOTEBOOK_TARGETS:
-        if sync_file(target, canonical_blocks, check_only=args.check):
+        if sync_notebook(target, canonical_blocks, check_only=args.check):
             any_drift = True
 
     if args.check:

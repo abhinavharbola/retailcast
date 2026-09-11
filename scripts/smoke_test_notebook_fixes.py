@@ -4,7 +4,7 @@ Smoke test for the fixes inside kaggle/notebooks/*.ipynb.
 pytest can't reach these directly - the notebooks import Kaggle-only packages
 (prophet, lightgbm, xgboost, mlflow, kaggle_secrets) and need the real Favorita
 dataset to run end-to-end. This script pulls the *actual current* source of the
-specific functions that were fixed straight out of the notebook files via `ast`
+specific functions that were fixed straight out of the notebook JSON via `ast`
 (not a hand-copied duplicate - if the notebook changes, this exercises whatever
 is really there) and runs them against small synthetic data to check:
 
@@ -26,12 +26,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from _notebook_utils import concatenated_source, read_notebook
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def extract_functions(notebook_path, names):
-    """Pulls specific top-level function defs out of a notebook-as-script file."""
-    source = notebook_path.read_text()
+    """Pulls specific top-level function defs out of a notebook's concatenated cell
+    source via ast, so this test runs the actual current source, not a hand-copied
+    duplicate."""
+    nb = read_notebook(notebook_path)
+    source = concatenated_source(nb)
     source = "\n".join(l for l in source.split("\n") if not l.strip().startswith("!"))
     tree = ast.parse(source)
     wanted = set(names)

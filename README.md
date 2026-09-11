@@ -98,7 +98,9 @@ retailcast-project/
 │       └── metrics.py                    # MAPE/WAPE/MASE - single source of truth, see scripts/sync_notebook_metrics.py
 │
 ├── scripts/
-│   └── sync_notebook_metrics.py          # propagates src/utils/metrics.py into the two notebooks that can't import it
+│   ├── sync_notebook_metrics.py          # propagates src/utils/metrics.py into the two notebooks that can't import it
+│   ├── smoke_test_notebook_fixes.py      # runs the notebooks' anomaly/run_fold fixes against synthetic data (no Kaggle needed)
+│   └── _notebook_utils.py                # shared .ipynb JSON <-> source helpers used by the two scripts above
 │
 ├── dashboard/
 │   ├── app.py                            # st.navigation router: page titles/icons/order, page_config
@@ -200,7 +202,7 @@ committing - it propagates the change into the two Kaggle notebooks that keep th
 copy (they can't `import src.utils.metrics`), and `tests/test_notebook_metrics_sync.py`
 will fail the suite if you forget.
 
-19 tests across 4 files: `MAPE`/`WAPE`/`MASE` correctness (`tests/test_metrics.py`), the numeric claim extraction/tolerance logic behind the grounding check, including which fact grounded a claim (`tests/test_grounding_check.py`), config/notebook-constant drift, including the cost-per-unit and sustained-activation constants (`tests/test_config_consistency.py`), and byte-for-byte drift between `src/utils/metrics.py` and its two notebook copies (`tests/test_notebook_metrics_sync.py`).
+20 tests across 5 files: `MAPE`/`WAPE`/`MASE` correctness (`tests/test_metrics.py`), the numeric claim extraction/tolerance logic behind the grounding check, including which fact grounded a claim (`tests/test_grounding_check.py`), config/notebook-constant drift, including the cost-per-unit and sustained-activation constants (`tests/test_config_consistency.py`), byte-for-byte drift between `src/utils/metrics.py` and its two notebook copies (`tests/test_notebook_metrics_sync.py`), and the notebook-level anomaly-injection/`run_fold` fixes against synthetic data (`tests/test_notebook_smoke.py`).
 
 ## Known limitations
 
