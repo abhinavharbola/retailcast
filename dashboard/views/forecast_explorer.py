@@ -35,19 +35,31 @@ def load_results():
 
 prophet, sarima, ml, holdout = load_results()
 
-ml_holdout = ml[ml["fold"] == "holdout"][["model", "mape", "wape", "mase"]].assign(source="ML (global)")
+prophet_holdout_rows = prophet[prophet["fold"] == "holdout"]
+sarima_holdout_rows = sarima[sarima["fold"] == "holdout"]
+# Global ML models are trained/evaluated over every store/family combo in one shot, so
+# their holdout footprint is every series present in the holdout predictions parquet.
+ml_n_series = holdout[["store_nbr", "family"]].drop_duplicates().shape[0]
+prophet_n_series = prophet_holdout_rows[["store_nbr", "family"]].drop_duplicates().shape[0]
+sarima_n_series = sarima_holdout_rows[["store_nbr", "family"]].drop_duplicates().shape[0]
+
+ml_holdout = (
+    ml[ml["fold"] == "holdout"][["model", "mape", "wape", "mase"]]
+    .assign(source="ML (global)", n_series=ml_n_series)
+)
 prophet_holdout = (
-    prophet[prophet["fold"] == "holdout"][["mape", "wape", "mase"]]
-    .mean().to_frame().T.assign(model="prophet", source="Prophet (60-series avg)")
+    prophet_holdout_rows[["mape", "wape", "mase"]]
+    .mean().to_frame().T.assign(model="prophet", source="Prophet (60-series avg)", n_series=prophet_n_series)
 )
 sarima_holdout = (
-    sarima[sarima["fold"] == "holdout"][["mape", "wape", "mase"]]
-    .mean().to_frame().T.assign(model="sarima", source="SARIMA (3-series avg)")
+    sarima_holdout_rows[["mape", "wape", "mase"]]
+    .mean().to_frame().T.assign(model="sarima", source="SARIMA (3-series avg)", n_series=sarima_n_series)
 )
 comparison = pd.concat([ml_holdout, prophet_holdout, sarima_holdout], ignore_index=True)
 comparison["fold"] = "holdout"  # this view only ever compares the holdout window
 for col in ["mape", "wape", "mase"]:
     comparison[col] = comparison[col].astype(float)
+comparison["n_series"] = comparison["n_series"].astype(int)
 comparison = comparison.sort_values("mase").reset_index(drop=True)
 
 best_row = comparison.iloc[0]
@@ -99,7 +111,7 @@ with st.container(border=True, key="model_compare"):
                 alt.value(TOKENS["forecast"]),
                 alt.value(TOKENS["chart_muted"]),
             ),
-            tooltip=["source", "model", alt.Tooltip("mase:Q", format=".3f"),
+            tooltip=["source", "model", "n_series", alt.Tooltip("mase:Q", format=".3f"),
                       alt.Tooltip("mape:Q", format=".2f"), alt.Tooltip("wape:Q", format=".2f")],
         )
         .properties(height=42 * len(chart_df) + 20)
@@ -114,10 +126,14 @@ with st.container(border=True, key="model_compare"):
                "Models to its left beat that baseline; models to its right don't.")
 
     st.dataframe(
-        comparison[["source", "model", "mape", "wape", "mase"]],
+        comparison[["source", "model", "n_series", "mape", "wape", "mase"]],
         width='stretch',
         hide_index=True,
     )
+    st.caption("n_series: how many store/family series each row's metrics were computed "
+               "over. SARIMA only ran a full grid search on 3 representative series (CPU "
+               "cost), so its row isn't directly comparable in scope to the 60-series ML "
+               "and Prophet rows - lower series count means a noisier average.")
     if st.button("Log this comparison to Supabase"):
         logged = 0
         error = None

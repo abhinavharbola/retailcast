@@ -17,9 +17,17 @@ EXPECTED_NOTEBOOK_PARAMS = {
     ("forecasting", "horizon_days"): 15,               # HORIZON in notebooks 03, 04
     ("forecasting", "n_folds"): 4,                      # N_FOLDS in notebooks 03, 04
     ("selection", "late_opening_threshold_days"): 400,  # LATE_OPENING_THRESHOLD_DAYS in 01
+    ("selection", "sustained_activation", "window_days"): 30,       # window= default, first_sustained_activation, notebook 01
+    ("selection", "sustained_activation", "min_active_days"): 20,   # min_active_days= default, first_sustained_activation, notebook 01
     ("anomaly_detection", "control_limit_k"): 2.5,      # k= in control_limit_flags, notebook 05
     ("anomaly_detection", "isolation_forest_contamination"): 0.05,  # contamination=, notebook 05
     ("anomaly_detection", "synthetic_injection", "n_anomalies"): 50,  # notebook 05
+    # FAMILY_COST_PER_UNIT_ERROR in notebook 04 - was previously untracked here, so this
+    # dict could drift from cost_per_unit_error in config.yaml without any test catching it.
+    ("cost_per_unit_error",): {
+        "GROCERY I": 0.75, "BEVERAGES": 0.75, "HOME CARE": 0.75,
+        "PRODUCE": 0.50, "DAIRY": 0.50, "CLEANING": 0.75,
+    },
 }
 
 

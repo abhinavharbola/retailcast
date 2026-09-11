@@ -39,3 +39,11 @@ Run these notebooks **in order**, each one saves its output to `/kaggle/working/
 (top-right "Output" tab) to keep locally, since the next notebook needs them as input
 (upload the previous notebook's output as a new Kaggle Dataset, or attach the previous
 notebook itself as an input source via "Add Data" → "Notebook Output").
+
+**Before running notebook N, check that its input source is notebook N-1's *latest*
+saved version.** This chain is entirely manual - Kaggle won't warn you if notebook 4 is
+still reading notebook 3's output from before you fixed a bug in notebook 3 and re-ran
+it. If you re-run an earlier notebook after a change, re-attach its output to every
+downstream notebook before re-running those too, and re-download all 14 files into
+`kaggle_outputs/` together at the end rather than one at a time, so the local dashboard
+never mixes files from two different runs of the pipeline.

@@ -75,7 +75,7 @@ Control limits catch more true anomalies (higher recall) at the cost of more fal
 retailcast-project/
 ├── kaggle/                               # Everything that runs on Kaggle, not locally
 │   ├── kaggle_setup.md                   # env setup, secrets, run order
-│   ├── requirements-ipynb.txt            # single source of truth, installed via !pip install on Kaggle
+│   ├── requirements-ipynb.txt            # pinned-version reference for debugging installs; each notebook's own inline !pip install line is what actually runs
 │   └── notebooks/
 │       ├── 01_eda.ipynb                  # subsetting, activation diagnostics, STL, stationarity tests
 │       ├── 02_feature_engineering.ipynb  # lag/rolling/calendar features, demand-pattern classification
@@ -95,7 +95,10 @@ retailcast-project/
 │   │   └── mlflow_utils.py               # queries past DagsHub/MLflow runs, surfaced in forecast_explorer.py
 │   └── utils/
 │       ├── config.py                     # loads configs/config.yaml, env vars
-│       └── metrics.py                    # MAPE/WAPE/MASE - single source, used by dashboard + tests
+│       └── metrics.py                    # MAPE/WAPE/MASE - single source of truth, see scripts/sync_notebook_metrics.py
+│
+├── scripts/
+│   └── sync_notebook_metrics.py          # propagates src/utils/metrics.py into the two notebooks that can't import it
 │
 ├── dashboard/
 │   ├── app.py                            # st.navigation router: page titles/icons/order, page_config
@@ -192,11 +195,17 @@ Every chart and number on every page is read directly from `kaggle_outputs/`, no
 pytest tests/ -v
 ```
 
-16 tests across 3 files: `MAPE`/`WAPE`/`MASE` correctness (`tests/test_metrics.py`), the numeric claim extraction/tolerance logic behind the grounding check (`tests/test_grounding_check.py`), and config/notebook-constant drift (`tests/test_config_consistency.py`).
+If you change `src/utils/metrics.py`, run `python scripts/sync_notebook_metrics.py` before
+committing - it propagates the change into the two Kaggle notebooks that keep their own
+copy (they can't `import src.utils.metrics`), and `tests/test_notebook_metrics_sync.py`
+will fail the suite if you forget.
+
+19 tests across 4 files: `MAPE`/`WAPE`/`MASE` correctness (`tests/test_metrics.py`), the numeric claim extraction/tolerance logic behind the grounding check, including which fact grounded a claim (`tests/test_grounding_check.py`), config/notebook-constant drift, including the cost-per-unit and sustained-activation constants (`tests/test_config_consistency.py`), and byte-for-byte drift between `src/utils/metrics.py` and its two notebook copies (`tests/test_notebook_metrics_sync.py`).
 
 ## Known limitations
 
 - **Backtesting, not live forecasting.** Every model is evaluated on a 15-day holdout window that already has known actuals. There's no production path that generates predictions for genuinely unseen future dates, that would need retraining on the full history and recursive multi-step forecasting. This was a deliberate scope boundary, not an oversight.
 - **`is_holiday` is national-only.** Regional/local holidays tied to a specific store's city aren't captured.
 - **Cost-per-unit figures are illustrative**, grounded in published grocery-retail margin benchmarks, not this business's actual P&L.
-- **The grounding check is regex-based**, not full claim verification. It can miss paraphrased claims with no literal number, and can flag numbers that are correct but simply aren't in the source facts.
+- **The grounding check is regex-based**, not full claim verification. It can miss paraphrased claims with no literal number, and can flag numbers that are correct but simply aren't in the source facts. It also matches a claim against whichever fact value is numerically closest, not necessarily the fact the claim is actually about - a hallucinated figure can still "ground" against an unrelated correct one. Each claim now carries the specific fact it matched (`matched_fact_key`, shown in the AI Report's "Flagged numeric claims" panel) so this is auditable rather than a bare pass/fail.
+- **The forecast comparison mixes evaluation scope.** LightGBM/XGBoost and Prophet are scored across all 60 series; SARIMA's grid search only runs on 3 representative series for CPU cost. Forecast Explorer now shows an `n_series` column so this isn't hidden inside the "avg" label.

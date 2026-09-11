@@ -52,6 +52,11 @@ def check_grounding(text, facts, config=CONFIG):
       story framing like "the top 3 features").
     - Percent/currency signs anchor the comparison type but bare decimals (a MASE like
       0.63) are matched against everything in `facts`, since the LLM may drop context.
+      This means a claim can be marked "grounded" against the wrong fact entirely (e.g.
+      a hallucinated recall figure that happens to land near the true MASE) - the ratio
+      says "a plausible number exists somewhere in facts," not "this specific claim is
+      correct." Each result below carries `matched_fact_key` so a reviewer can check
+      which fact actually grounded it, rather than trusting the boolean alone.
     - `absolute_tolerance_default` is an absolute error budget, not a percentage - it must
       stay small relative to the 0-1 scale most bare-number facts (MASE, precision, recall)
       live on. Larger numbers are still protected by `relative_tolerance`.
@@ -65,14 +70,21 @@ def check_grounding(text, facts, config=CONFIG):
     currency_tol = gc_cfg["absolute_tolerance_currency"]
     default_tol = gc_cfg["absolute_tolerance_default"]
 
-    fact_values = [v for v in facts.values() if isinstance(v, (int, float))]
+    fact_items = [(k, v) for k, v in facts.items() if isinstance(v, (int, float))]
     claims = extract_claims(text)
 
     results = []
     for claim in claims:
         tol = currency_tol if claim["kind"] == "currency" else default_tol
-        matched = any(_within_tolerance(claim["value"], fv, rel_tol, tol) for fv in fact_values)
-        results.append({**claim, "grounded": matched})
+        matches = [
+            (key, fv) for key, fv in fact_items
+            if _within_tolerance(claim["value"], fv, rel_tol, tol)
+        ]
+        matched_fact_key = None
+        if matches:
+            # Prefer the closest value if several facts happen to fall within tolerance.
+            matched_fact_key = min(matches, key=lambda kv: abs(kv[1] - claim["value"]))[0]
+        results.append({**claim, "grounded": bool(matches), "matched_fact_key": matched_fact_key})
 
     grounded_count = sum(1 for r in results if r["grounded"])
     total = len(results)

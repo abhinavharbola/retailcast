@@ -45,6 +45,19 @@ def test_small_scale_hallucination_is_flagged():
     assert len(flagged) == 1
 
 
+def test_matched_fact_key_identifies_which_fact_grounded_the_claim():
+    result = check_grounding(
+        "The holdout MASE was 0.63.",
+        {"best_ml_mase_holdout": 0.632, "sarima_mase_holdout": 1.019},
+    )
+    assert result["claims"][0]["matched_fact_key"] == "best_ml_mase_holdout"
+
+
+def test_matched_fact_key_is_none_when_ungrounded():
+    result = check_grounding("The holdout MASE was 4.2.", {"mase": 0.632})
+    assert result["claims"][0]["matched_fact_key"] is None
+
+
 def test_small_scale_rounding_still_grounds():
     # Make sure the tightened tolerance didn't overcorrect: reasonable rounding on a
     # 0-1 scale fact should still pass.

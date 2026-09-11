@@ -1,10 +1,14 @@
 import json
+import time
 from pathlib import Path
 
 import pandas as pd
 import requests
 
 from src.utils.config import CONFIG
+
+MAX_ATTEMPTS_PER_PROVIDER = 2  # 1 retry after a transient failure (rate limit, timeout, etc.)
+RETRY_BACKOFF_SECONDS = 2
 
 
 def build_facts(results_dir, config=CONFIG):
@@ -148,16 +152,26 @@ def generate_narrative(results_dir, config=CONFIG):
     for provider in llm_cfg["provider_priority"]:
         api_key = env.get(KEY_NAMES[provider])
         if not api_key:
-            attempts.append({"provider": provider, "success": False, "error": "no API key configured"})
+            attempts.append({"provider": provider, "success": False,
+                              "error": "no API key configured", "attempt": None})
             continue
-        try:
-            text = PROVIDERS[provider](
-                prompt, api_key, llm_cfg["models"][provider],
-                llm_cfg["max_tokens"], llm_cfg["temperature"],
-            )
-            attempts.append({"provider": provider, "success": True, "error": None})
-            return {"text": text, "provider": provider, "facts": facts, "attempts": attempts}
-        except Exception as e:
-            attempts.append({"provider": provider, "success": False, "error": str(e)})
+
+        last_error = None
+        for attempt_num in range(1, MAX_ATTEMPTS_PER_PROVIDER + 1):
+            try:
+                text = PROVIDERS[provider](
+                    prompt, api_key, llm_cfg["models"][provider],
+                    llm_cfg["max_tokens"], llm_cfg["temperature"],
+                )
+                attempts.append({"provider": provider, "success": True, "error": None,
+                                  "attempt": attempt_num})
+                return {"text": text, "provider": provider, "facts": facts, "attempts": attempts}
+            except Exception as e:
+                last_error = str(e)
+                if attempt_num < MAX_ATTEMPTS_PER_PROVIDER:
+                    time.sleep(RETRY_BACKOFF_SECONDS)
+
+        attempts.append({"provider": provider, "success": False, "error": last_error,
+                          "attempt": MAX_ATTEMPTS_PER_PROVIDER})
 
     raise RuntimeError(f"All LLM providers failed: {attempts}")

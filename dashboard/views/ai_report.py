@@ -178,7 +178,16 @@ if st.button("Generate new report", type="primary"):
     with claims_col:
         with st.expander("Flagged numeric claims"):
             ungrounded = [c for c in grounding["claims"] if not c["grounded"]]
-            st.write(ungrounded if ungrounded else "None. Every extracted number matched a source figure.")
+            if ungrounded:
+                st.write(ungrounded)
+            else:
+                grounded_claims = [c for c in grounding["claims"] if c["grounded"]]
+                st.write("None flagged. Every extracted number matched a source figure "
+                         "(see which fact matched each claim below).")
+                st.json([
+                    {"claim": c["raw"], "matched_fact_key": c["matched_fact_key"]}
+                    for c in grounded_claims
+                ])
     with facts_col:
         with st.expander("Source facts used"):
             st.json(facts)
