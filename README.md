@@ -8,7 +8,7 @@ The project separates heavy computation from a lightweight local Streamlit dashb
 ## Preview
 
 <p align="center">
-  <img src="assets/dashboard.png.png" width="720" alt="Anomaly Detection view of the project with graphs and tables that can be saved to supabase db on a button-click">
+  <img src="assets/dashboard.png" width="720" alt="Anomaly Detection view of the project with graphs and tables that can be saved to supabase db on a button-click">
   <br>
   <sub>Anomaly Detection view (Synthetic-Injection evaluation)</sub>
 </p>
