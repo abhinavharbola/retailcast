@@ -1,6 +1,6 @@
 # RetailCast: Forecasting and Anomaly Bench
 
-A retail demand forecasting and anomaly detection pipeline that benchmarks Prophet, SARIMA, LightGBM, and XGBoost across 60 retail series using expanding-window walk-forward cross-validation. It uses Kaggle’s free notebooks for training, Supabase’s free Postgres tier for storage, and free-tier NIM/Groq/Gemini APIs for automated reporting with provider fallback.
+A retail demand forecasting and anomaly detection pipeline that benchmarks Prophet, SARIMA, LightGBM, and XGBoost across 60 retail series using expanding-window walk-forward cross-validation. It uses Kaggle’s free notebooks for training, Supabase’s free Postgres tier for storage, and free-tier Groq/NIM/Gemini APIs for automated reporting with provider fallback.
 
 The project separates heavy computation from a lightweight local Streamlit dashboard. The LLM generates narrative reports and verifies every numeric claim against the original source data before displaying it. Reports are automatically saved to Supabase and can be downloaded as Markdown, including previous reports from the dashboard’s history.
 
@@ -8,12 +8,12 @@ The project separates heavy computation from a lightweight local Streamlit dashb
 ## Preview
 
 <p align="center">
-  <img src="assets/ui.png" width="720" alt="Anomaly Detection view of the project with graphs and tables that can be saved to supabase db on a button-click">
+  <img src="assets/dashboard.png.png" width="720" alt="Anomaly Detection view of the project with graphs and tables that can be saved to supabase db on a button-click">
   <br>
-  <sub><em>Anomaly Detection view (Synthetic-Injection evaluation)</em></sub>
+  <sub>Anomaly Detection view (Synthetic-Injection evaluation)</sub>
 </p>
 
-Additional screenshots (`homepage.png`, `dataset_overview.png`, `anomaly_view.png`, `forecast.png`, `ai_report.png`) are in [`assets/`](assets/) using that naming convention, one per dashboard view.
+> Additional screenshots in [`assets/`](assets/), one per dashboard view.
 
 ## Architecture
 
@@ -31,7 +31,7 @@ flowchart TB
     subgraph Local["Local"]
         F --> G["Streamlit Dashboard"]
         G --> H[("Supabase<br/>Reports & Flags")]
-        G --> I["LLM Provider<br/>NIM → Groq → Gemini"]
+        G --> I["LLM Provider<br/>Groq → NIM → Gemini"]
         D -.->|"metrics"| J[("DagsHub / MLflow")]
     end
 ```
@@ -67,7 +67,7 @@ Isolation Forest now has both far fewer false positives and the higher F1, once 
 - **Dashboard:** Streamlit + Altair (Altair ships with Streamlit, so custom charts add
   zero extra dependencies over the built-in `st.bar_chart`/`st.line_chart`)
 - **Storage:** Supabase (Postgres)
-- **LLM narrative:** NVIDIA NIM / Groq / Google Gemini, with automatic fallback
+- **LLM narrative:** Groq / NVIDIA NIM / Google Gemini, with automatic fallback
 
 ## Project structure
 
@@ -87,7 +87,7 @@ retailcast-project/
 │
 ├── src/                                  # LOCAL-ONLY modules, imported by the dashboard
 │   ├── llm/
-│   │   ├── narrative.py                  # prompt construction + provider routing (NIM -> Groq -> Gemini)
+│   │   ├── narrative.py                  # prompt construction + provider routing (Groq -> NIM -> Gemini)
 │   │   └── grounding_check.py            # regex-extract numeric claims, verify against source facts
 │   ├── storage/
 │   │   └── supabase_client.py            # save/fetch forecast runs, reports, anomaly flags
@@ -118,7 +118,7 @@ retailcast-project/
 │
 ├── tests/
 │
-├── .env.example                          # NIM/Groq/Gemini API keys, Supabase URL + key, DagsHub token + URL
+├── .env.example                          # Groq/NIM/Gemini API keys, Supabase URL + key, DagsHub token + URL
 ├── .gitignore
 ├── requirements.txt
 └── README.md                             # architecture diagram, setup instructions, results summary
@@ -143,7 +143,7 @@ pip install pytest
 cp .env.example .env
 ```
 
-Fill in at least one LLM provider key (`NIM_API_KEY` / `GROQ_API_KEY` / `GEMINI_API_KEY`) and your Supabase **secret** key (this runs server-side, not in a browser). `DAGSHUB_TOKEN` / `DAGSHUB_REPO` are optional - without them the dashboard works normally, just without the "Experiment history" section on Forecast Explorer.
+Fill in at least one LLM provider key (`GROQ_API_KEY` / `NIM_API_KEY` / `GEMINI_API_KEY`) and your Supabase **secret** key (this runs server-side, not in a browser). `DAGSHUB_TOKEN` / `DAGSHUB_REPO` are optional - without them the dashboard works normally, just without the "Experiment history" section on Forecast Explorer.
 
 ### 4. Supabase tables
 
@@ -202,12 +202,12 @@ committing - it propagates the change into the two Kaggle notebooks that keep th
 copy (they can't `import src.utils.metrics`), and `tests/test_notebook_metrics_sync.py`
 will fail the suite if you forget.
 
-20 tests across 5 files: `MAPE`/`WAPE`/`MASE` correctness (`tests/test_metrics.py`), the numeric claim extraction/tolerance logic behind the grounding check, including which fact grounded a claim (`tests/test_grounding_check.py`), config/notebook-constant drift, including the cost-per-unit and sustained-activation constants (`tests/test_config_consistency.py`), byte-for-byte drift between `src/utils/metrics.py` and its two notebook copies (`tests/test_notebook_metrics_sync.py`), and the notebook-level anomaly-injection/`run_fold` fixes against synthetic data (`tests/test_notebook_smoke.py`).
+20 tests across 5 files: `MAPE`/`WAPE`/`MASE` correctness, the numeric claim extraction/tolerance logic behind the grounding check, including which fact grounded a claim, config/notebook-constant drift, including the cost-per-unit and sustained-activation constants, byte-for-byte drift between `src/utils/metrics.py` and its two notebook copies, and the notebook-level anomaly-injection/`run_fold` fixes against synthetic data.
 
 ## Known limitations
 
-- **Backtesting, not live forecasting.** Every model is evaluated on a 15-day holdout window that already has known actuals. There's no production path that generates predictions for genuinely unseen future dates, that would need retraining on the full history and recursive multi-step forecasting. This was a deliberate scope boundary, not an oversight.
+- **Backtesting, not live forecasting.** Every model is evaluated on a 15-day holdout window that already has known actuals. This was a deliberate scope boundary, not an oversight.
 - **`is_holiday` is national-only.** Regional/local holidays tied to a specific store's city aren't captured.
 - **Cost-per-unit figures are illustrative**, grounded in published grocery-retail margin benchmarks, not this business's actual P&L.
-- **The grounding check is regex-based**, not full claim verification. It can miss paraphrased claims with no literal number, and can flag numbers that are correct but simply aren't in the source facts. It also matches a claim against whichever fact value is numerically closest, not necessarily the fact the claim is actually about - a hallucinated figure can still "ground" against an unrelated correct one. Each claim now carries the specific fact it matched (`matched_fact_key`, shown in the AI Report's "Flagged numeric claims" panel) so this is auditable rather than a bare pass/fail.
+- **The grounding check is regex-based**, not full claim verification. It can miss paraphrased claims with no literal number, and can flag numbers that are correct but simply aren't in the source facts. It also matches a claim against whichever fact value is numerically closest, not necessarily the fact the claim is actually about - a hallucinated figure can still "ground" against an unrelated correct one.
 - **The forecast comparison mixes evaluation scope.** LightGBM/XGBoost and Prophet are scored across all 60 series; SARIMA's grid search only runs on 3 representative series for CPU cost. Forecast Explorer now shows an `n_series` column so this isn't hidden inside the "avg" label.
