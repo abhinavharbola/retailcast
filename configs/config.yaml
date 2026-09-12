@@ -43,7 +43,7 @@ cost_per_unit_error:
   "CLEANING": 0.75
 
 llm:
-  provider_priority: ["nim", "groq", "gemini"]
+  provider_priority: ["groq", "nim", "gemini"]
   models:
     groq: "openai/gpt-oss-120b"
     nim: "openai/gpt-oss-120b"

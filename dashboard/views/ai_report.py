@@ -104,17 +104,45 @@ def render_anomaly_method_chart(precision, recall, title):
     return altair_theme(chart)
 
 
-if st.button("Generate new report", type="primary"):
+def _generate_report():
     with st.spinner("Calling LLM provider..."):
         try:
             result = generate_narrative(DATA_DIR)
         except Exception as e:
-            st.error(f"Report generation failed: {e}")
-            st.stop()
+            st.session_state.ai_report = None
+            st.session_state.ai_report_error = str(e)
+            return
 
     grounding = check_grounding(result["text"], result["facts"])
-    facts = result["facts"]
     generated_at = datetime.now(timezone.utc).isoformat()
+    try:
+        save_report(result["text"], result["facts"], result["provider"], grounding["grounded_ratio"])
+        save_status = "Saved to Supabase."
+    except Exception as e:
+        save_status = f"Not saved to Supabase: {e}"
+
+    st.session_state.ai_report = {
+        "result": result, "grounding": grounding,
+        "generated_at": generated_at, "save_status": save_status,
+    }
+    st.session_state.ai_report_error = None
+
+
+has_report = st.session_state.get("ai_report") is not None
+st.button(
+    "Regenerate report" if has_report else "Generate new report",
+    type="secondary" if has_report else "primary",
+    on_click=_generate_report,
+)
+
+if st.session_state.get("ai_report_error"):
+    st.error(f"Report generation failed: {st.session_state.ai_report_error}")
+
+if has_report:
+    result = st.session_state.ai_report["result"]
+    grounding = st.session_state.ai_report["grounding"]
+    facts = result["facts"]
+    generated_at = st.session_state.ai_report["generated_at"]
     fallback_happened = any(a["provider"] != result["provider"] for a in result["attempts"])
 
     st.markdown('<div class="rc-eyebrow">Key metrics at a glance</div>', unsafe_allow_html=True)
@@ -201,11 +229,7 @@ if st.button("Generate new report", type="primary"):
                     unsafe_allow_html=True,
                 )
 
-    try:
-        save_report(result["text"], facts, result["provider"], grounding["grounded_ratio"])
-        st.caption("Saved to Supabase.")
-    except Exception as e:
-        st.caption(f"Not saved to Supabase: {e}")
+    st.caption(st.session_state.ai_report["save_status"])
 
 st.divider()
 st.markdown('<div class="rc-eyebrow">Past reports</div>', unsafe_allow_html=True)
