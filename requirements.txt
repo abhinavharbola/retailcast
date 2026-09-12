@@ -2,10 +2,10 @@ streamlit
 altair
 pandas
 numpy
+pytest
 pyarrow
 python-dotenv
 pyyaml
 requests
 supabase
 mlflow
-pytest
