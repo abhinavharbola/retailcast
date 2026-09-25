@@ -35,10 +35,10 @@ def load_results():
 
 prophet, sarima, ml, holdout = load_results()
 
+holdout_model = holdout["model"].iloc[0] if "model" in holdout.columns and not holdout.empty else None
+
 prophet_holdout_rows = prophet[prophet["fold"] == "holdout"]
 sarima_holdout_rows = sarima[sarima["fold"] == "holdout"]
-# Global ML models are trained/evaluated over every store/family combo in one shot, so
-# their holdout footprint is every series present in the holdout predictions parquet.
 ml_n_series = holdout[["store_nbr", "family"]].drop_duplicates().shape[0]
 prophet_n_series = prophet_holdout_rows[["store_nbr", "family"]].drop_duplicates().shape[0]
 sarima_n_series = sarima_holdout_rows[["store_nbr", "family"]].drop_duplicates().shape[0]
@@ -56,7 +56,7 @@ sarima_holdout = (
     .mean().to_frame().T.assign(model="sarima", source="SARIMA (3-series avg)", n_series=sarima_n_series)
 )
 comparison = pd.concat([ml_holdout, prophet_holdout, sarima_holdout], ignore_index=True)
-comparison["fold"] = "holdout"  # this view only ever compares the holdout window
+comparison["fold"] = "holdout"
 for col in ["mape", "wape", "mase"]:
     comparison[col] = comparison[col].astype(float)
 comparison["n_series"] = comparison["n_series"].astype(int)
@@ -64,7 +64,7 @@ comparison = comparison.sort_values("mase").reset_index(drop=True)
 
 best_row = comparison.iloc[0]
 best_mase = float(best_row["mase"])
-vs_naive_pct = (1 - best_mase) * 100  # MASE < 1.0 means "beats a naive seasonal forecast"
+vs_naive_pct = (1 - best_mase) * 100
 
 st.markdown(
     f'<div class="rc-card rc-card--forecast">'
@@ -87,16 +87,6 @@ st.markdown('<div class="rc-eyebrow" style="--rc-eyebrow-color:{}">Model compari
 
 with st.container(border=True, key="model_compare"):
     chart_df = comparison.copy()
-    # Bug fix: previously every row used chart_df["source"] as its chart label, but
-    # ml_holdout keeps one row PER ML model (lightgbm, xgboost) both labeled "ML (global)".
-    # Two rows sharing one y-axis category makes Vega-Lite stack them into a single bar,
-    # so the bar's length became the SUM of both models' MASE instead of showing either
-    # one - and it's more useful this way anyway: it shows LightGBM vs XGBoost separately
-    # instead of hiding one behind the other.
-    # Label is always the bare model name now (was a long "Prophet (60-series avg)" /
-    # "SARIMA (3-series avg)" string for those two rows, which got clipped by Vega-Lite's
-    # axis label width limit) - the averaging caveat still shows up via the tooltip's
-    # "source" field instead.
     chart_df["label"] = chart_df["model"]
     chart_df["is_best"] = chart_df["model"] == best_row["model"]
 
@@ -172,8 +162,6 @@ with st.container(border=True, key="experiment_history"):
         recent_runs = None
         st.caption(f"Could not load MLflow run history: {e}")
     if recent_runs:
-        # metrics/params come back as nested dicts per run; flatten so each ends up
-        # as its own column instead of rendering as an unreadable dict blob.
         st.dataframe(pd.json_normalize(recent_runs), width='stretch', hide_index=True)
     elif recent_runs is not None:
         st.caption("No MLflow run history available. Set DAGSHUB_TOKEN and DAGSHUB_REPO "
@@ -198,9 +186,6 @@ with st.container(border=True, key="series_chart"):
             alt.Chart(melted)
             .mark_line(point=True, strokeWidth=2)
             .encode(
-                # Explicit format: Vega-Lite's default temporal axis mixes tick
-                # granularities (month name on the first tick of a month, weekday+day
-                # elsewhere), which reads as inconsistent over a short 15-day window.
                 x=alt.X("date:T", title=None, axis=alt.Axis(format="%b %d")),
                 y=alt.Y("units:Q", title="units"),
                 color=alt.Color(
@@ -216,4 +201,11 @@ with st.container(border=True, key="series_chart"):
             .properties(height=320)
         )
         st.altair_chart(altair_theme(line), width='stretch')
-        st.caption(f"Predictions shown are from {best_row['model']}, the best model on holdout MASE.")
+        if holdout_model is not None:
+            st.caption(f"Predictions shown are from {holdout_model}, the best of the ML "
+                       f"models on holdout MASE (see comparison above for how it stacks "
+                       f"up against Prophet/SARIMA).")
+        else:
+            st.caption("Predictions shown are from the best of the ML models on holdout "
+                       "MASE (see comparison above for how it stacks up against "
+                       "Prophet/SARIMA). Re-run notebook 04 to record which model this is.")
